@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#f5f7fb"/>
+  <g font-family="Segoe UI, sans-serif">
+    <text x="60" y="72" font-size="34" font-weight="700" fill="#182230">Phase 1 — 安全な開発環境</text>
+    <rect x="60" y="118" width="510" height="410" rx="20" fill="white" stroke="#ccd6e2" stroke-width="2"/>
+    <text x="95" y="165" font-size="22" font-weight="700" fill="#17324d">確認結果</text>
+    <text x="95" y="215" font-size="19" fill="#26384a">✓ 既存アプリなし</text>
+    <text x="95" y="258" font-size="19" fill="#26384a">✓ 既存Gitリポジトリなし</text>
+    <text x="95" y="301" font-size="19" fill="#26384a">✓ Git 2.55.0 あり</text>
+    <text x="95" y="344" font-size="19" fill="#26384a">✓ VS Code あり</text>
+    <text x="95" y="387" font-size="19" fill="#26384a">△ 通常PATHにNode.jsなし</text>
+    <text x="95" y="430" font-size="19" fill="#26384a">— Docker / DBサーバーなし</text>
+    <rect x="630" y="118" width="510" height="410" rx="20" fill="#17324d"/>
+    <text x="665" y="165" font-size="22" font-weight="700" fill="white">今回使うもの</text>
+    <text x="665" y="220" font-size="20" fill="white">Git　変更履歴</text>
+    <text x="665" y="268" font-size="20" fill="white">Codex同梱Node.js　開発・テスト</text>
+    <text x="665" y="316" font-size="20" fill="white">React / TypeScript　アプリ</text>
+    <text x="665" y="364" font-size="20" fill="white">ブラウザー　実行と安全な撮影</text>
+    <text x="665" y="430" font-size="17" fill="#d7e6f3">追加インストール・外部契約・課金なし</text>
+    <rect x="60" y="565" width="1080" height="62" rx="14" fill="#e9f7ef"/>
+    <text x="90" y="604" font-size="19" fill="#21633e">既存の sources/ は読み取り専用のまま。job-hunting-app/ だけを変更。</text>
+  </g>
+</svg>
+

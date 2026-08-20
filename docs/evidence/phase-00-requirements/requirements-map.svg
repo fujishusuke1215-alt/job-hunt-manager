@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <rect width="1200" height="675" fill="#f5f7fb"/>
+  <text x="60" y="72" font-family="Segoe UI, sans-serif" font-size="34" font-weight="700" fill="#182230">Phase 0 — 要件マップ</text>
+  <g font-family="Segoe UI, sans-serif">
+    <rect x="60" y="115" width="325" height="150" rx="18" fill="#17324d"/>
+    <text x="85" y="155" font-size="22" fill="white" font-weight="700">同じ重さの3目的</text>
+    <text x="85" y="193" font-size="18" fill="white">1. 実際の就活で使う</text>
+    <text x="85" y="226" font-size="18" fill="white">2. ポートフォリオにする</text>
+    <text x="85" y="259" font-size="18" fill="white">3. 後から学び直せる</text>
+    <rect x="430" y="115" width="710" height="255" rx="18" fill="white" stroke="#c9d2df" stroke-width="2"/>
+    <text x="460" y="157" font-size="22" fill="#17324d" font-weight="700">初版の必須機能</text>
+    <text x="460" y="198" font-size="18" fill="#26384a">企業CRUD　　選考イベント　　ステータス　　締切警告</text>
+    <text x="460" y="238" font-size="18" fill="#26384a">面接情報　　メモ　　検索・フィルター　　ダッシュボード</text>
+    <text x="460" y="278" font-size="18" fill="#26384a">応募資格　　Web/コードテスト　　評価点・ランキング</text>
+    <text x="460" y="318" font-size="18" fill="#26384a">本人用保存と公開デモの分離　　JSONバックアップ</text>
+    <rect x="60" y="415" width="1080" height="190" rx="18" fill="#fff4e8" stroke="#edb86a" stroke-width="2"/>
+    <text x="90" y="460" font-size="22" fill="#7a4100" font-weight="700">初版では作らない</text>
+    <text x="90" y="505" font-size="18" fill="#5c4630">Gmail・MyPage監視 / Web検索・スクレイピング / OAuth / 課金API</text>
+    <text x="90" y="545" font-size="18" fill="#5c4630">外部DB / Docker / クラウド公開（必要性と無課金を再確認して将来検討）</text>
+    <text x="90" y="582" font-size="16" fill="#7a5a34">理由: 中難度の中心に集中し、個人情報・課金・運用リスクを増やさない</text>
+  </g>
+</svg>
+
