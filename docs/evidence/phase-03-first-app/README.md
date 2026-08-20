@@ -30,7 +30,7 @@ React/TypeScript/Viteの最小構成を作り、共通ヘッダー、メニュ�
 公式npmレジストリだけを許可し、esbuildだけを明示承認し、コマンド中だけNode.jsの場所を指定しました。
 ## 13. このフェーズで覚える言葉
 React、Vite、Node.js、package、localhost、build。
-## 14. 面接で聞かれた場合の説明例
+## 14. 面接用30秒説明
 「ReactとTypeScriptで画面の土台を作り、最初から公開デモ表示とダッシュボードを用意しました。開発用サーバーと本番buildの両方を確認しています。」
 ## 15. 理解度チェック
 1. Reactは何を担当しますか。 2. Viteは何をしますか。 3. localhostとは何ですか。
@@ -42,4 +42,3 @@ React、Vite、Node.js、package、localhost、build。
 - 覚える3点: React=画面、Vite=起動/build、localhost=PC内。
 - 覚えなくてよい: 依存パッケージの全バージョン。
 - 面接までに: ブラウザーへ画面が出るまでを説明する。
-

@@ -32,7 +32,7 @@ LAN内URLで企業登録すると `crypto.randomUUID is not a function` とな�
 `createId()` を作り、randomUUIDが使える場合は使用し、使えない場合は時刻と乱数からIDを作るようにしました。修正後に同じブラウザー操作で登録成功を確認しました。
 ## 13. このフェーズで覚える言葉
 CRUD、form、validation、ID、secure context。
-## 14. 面接で聞かれた場合の説明例
+## 14. 面接用30秒説明
 「企業CRUDと多項目フォームを実装しました。実ブラウザーでID生成の環境差を見つけ、機能検出を使う代替処理へ分離して修正しました。」
 ## 15. 理解度チェック
 1. CRUDの4語は何ですか。2. IDはなぜ必要ですか。3. 単体テストだけで見逃した理由は何ですか。
@@ -44,4 +44,3 @@ CRUD、form、validation、ID、secure context。
 - 覚える3点: CRUD、Company型、randomUUIDの実バグ。
 - 覚えなくてよい: CSSの細かな数値。
 - 面接までに: エラー→原因→再発防止を説明する。
-

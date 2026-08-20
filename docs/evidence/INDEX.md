@@ -12,4 +12,4 @@
 | 7 | 保存・モード分離 | `phase-07-storage/02-personal-mode.png` | localStorageと安全なデモ | 完了 |
 | 8 | UI/UX | `phase-08-ui-ux/01-mobile-dashboard.png` | 見落としを減らす設計 | 完了 |
 | 9 | テスト | `phase-09-testing/01-validation-error.png` | 自動テストと修正 | 完了 |
-| 10 | リリース準備 | 後で追加 | READMEと最終監査 | 未着手 |
+| 10 | リリース準備 | `../portfolio/screenshots/dashboard.png` | READMEと最終監査 | 完了 |

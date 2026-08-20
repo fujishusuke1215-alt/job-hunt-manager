@@ -31,7 +31,7 @@
 初版はlocalStorageに限定し、保存サービスを分離して将来APIへ交換可能にしました。
 ## 13. このフェーズで覚える言葉
 localStorage、JSON、schemaVersion、永続化、インポート。
-## 14. 面接で聞かれた場合の説明例
+## 14. 面接用30秒説明
 「本人用はlocalStorage、公開デモはソース内ダミーへ分離しました。バックアップは選考の入れ子構造を保てるJSONとし、バージョンと最低限の形を検証します。」
 ## 15. 理解度チェック
 1. 本人用データはGitに入りますか。2. schemaVersionは何のためですか。3. localStorageの弱点は何ですか。
@@ -43,4 +43,3 @@ localStorage、JSON、schemaVersion、永続化、インポート。
 - 覚える3点: モード分離、localStorage、JSON検証。
 - 覚えなくてよい: Blob URLの細部。
 - 面接までに: 外部DBを使わなかった判断を説明する。
-

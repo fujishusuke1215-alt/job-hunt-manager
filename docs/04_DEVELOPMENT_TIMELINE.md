@@ -13,4 +13,5 @@
 | 6 検索・集計 | 次の行動を見つけやすくする | 検索、4軸絞り込み、並び替え、ダッシュボード | `companyFilters.ts`, `Dashboard.tsx` | 内蔵操作面の空文字入力差を全選択+削除で確認 |
 | 7 保存 | 再読み込み後も本人用を保持 | localStorage、JSON、モード分離 | `storage.ts`, `DataTools.tsx` | 外部DBを初版から外し保存境界を分離 |
 | 8 UI/UX | PCと狭い画面で情報を読めるようにする | 390px幅、下部ナビ、警告色、ARIA | `styles.css`, `AppShell.tsx` | 短縮ラベルのアクセシブル名をARIAで補完 |
-| 9 テスト | 必須機能と回帰を確認 | lint/build成功、17 unit/component、3 E2E成功 | `src/*.test.*`, `e2e/` | VitestがE2Eも読んだため探索範囲を分離 |
+| 9 テスト | 必須機能と回帰を確認 | lint/build成功、18 unit/component、3 E2E成功 | `src/*.test.*`, `e2e/` | VitestがE2Eも読んだため探索範囲を分離 |
+| 10 リリース準備 | GitHub・面接・学習の入口を作る | README、5ポートフォリオ資料、最終監査 | `README.md`, `docs/portfolio/`, `FINAL_AUDIT.md` | 課金可能性を避け、外部公開せずローカル成果物で完了 |
