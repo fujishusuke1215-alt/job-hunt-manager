@@ -1,0 +1,138 @@
+import type { Company } from '../types'
+
+const day = 86_400_000
+const atOffset = (offset: number, hour = 18) => {
+  const date = new Date(Date.now() + offset * day)
+  date.setHours(hour, 0, 0, 0)
+  return date.toISOString().slice(0, 16)
+}
+
+const fixedCreatedAt = '2026-08-01T09:00:00.000Z'
+
+export function createDemoCompanies(): Company[] {
+  return [
+    {
+      id: 'demo-company-1',
+      name: '株式会社サンプルテック',
+      role: 'Webエンジニア',
+      applicationCategory: '新卒・エンジニア職',
+      priority: 'A',
+      interest: 5,
+      status: 'コーディングテスト待ち',
+      graduateEligibility: '応募可',
+      existingGraduateEligibility: '応募可',
+      workExperienceEligibility: '要確認',
+      webTest: '適性検査（架空）',
+      codingTest: '実装課題（架空）',
+      myPageStatus: '開設済み',
+      applicationUrl: 'https://example.com/sample-tech',
+      memo: '公開デモ用の架空企業。バックエンド志望という想定。',
+      scores: { salary: 4, benefits: 4, wlb: 4, remote: 5, flex: 5, overseas: 3, itFit: 5 },
+      events: [
+        {
+          id: 'demo-event-1',
+          type: 'コーディングテスト',
+          title: '実装課題の提出',
+          scheduledAt: atOffset(3),
+          status: '予定',
+          location: 'オンライン（架空）',
+          memo: '所要時間90分という想定のダミー情報。',
+        },
+        {
+          id: 'demo-event-2',
+          type: 'ES',
+          title: '応募書類提出',
+          scheduledAt: atOffset(-5),
+          status: '完了',
+          location: 'MyPage（架空）',
+          memo: '',
+        },
+      ],
+      createdAt: fixedCreatedAt,
+      updatedAt: '2026-08-18T10:00:00.000Z',
+    },
+    {
+      id: 'demo-company-2',
+      name: 'みらいデジタル株式会社',
+      role: 'DXコンサルタント',
+      applicationCategory: '新卒・IT/DX職',
+      priority: 'A',
+      interest: 4,
+      status: '面接待ち',
+      graduateEligibility: '応募可',
+      existingGraduateEligibility: '要確認',
+      workExperienceEligibility: '応募可',
+      webTest: 'Web適性検査（架空）',
+      codingTest: 'なし（架空）',
+      myPageStatus: '開設済み',
+      applicationUrl: 'https://example.com/mirai-digital',
+      memo: '働き方とDX案件の幅を重視して比較するダミー企業。',
+      scores: { salary: 4, benefits: 5, wlb: 5, remote: 4, flex: 5, overseas: 4, itFit: 4 },
+      events: [
+        {
+          id: 'demo-event-3',
+          type: '面接',
+          title: '一次面接',
+          scheduledAt: atOffset(6, 14),
+          status: '予定',
+          location: 'オンライン（架空）',
+          memo: '面接内容は完全なダミー。開発経験の説明を準備する想定。',
+        },
+      ],
+      createdAt: fixedCreatedAt,
+      updatedAt: '2026-08-19T08:30:00.000Z',
+    },
+    {
+      id: 'demo-company-3',
+      name: '北星クラウドサービス株式会社',
+      role: 'システムエンジニア',
+      applicationCategory: '既卒可・技術職',
+      priority: 'B',
+      interest: 3,
+      status: 'ES提出待ち',
+      graduateEligibility: '応募可',
+      existingGraduateEligibility: '応募可',
+      workExperienceEligibility: '応募可',
+      webTest: '要確認',
+      codingTest: '要確認',
+      myPageStatus: '未開設',
+      applicationUrl: 'https://example.com/hokusei-cloud',
+      memo: '応募資格を確認しながら進める想定の架空企業。',
+      scores: { salary: 3, benefits: 4, wlb: 4, remote: 3, flex: 3, overseas: 2, itFit: 4 },
+      events: [
+        {
+          id: 'demo-event-4',
+          type: 'ES',
+          title: 'エントリーシート締切',
+          scheduledAt: atOffset(12),
+          status: '予定',
+          location: 'MyPage（架空）',
+          memo: '',
+        },
+      ],
+      createdAt: fixedCreatedAt,
+      updatedAt: '2026-08-16T06:00:00.000Z',
+    },
+    {
+      id: 'demo-company-4',
+      name: '青空プロダクト株式会社',
+      role: 'プロダクトエンジニア',
+      applicationCategory: '新卒採用',
+      priority: 'C',
+      interest: 2,
+      status: '検討中',
+      graduateEligibility: '応募可',
+      existingGraduateEligibility: '応募不可',
+      workExperienceEligibility: '応募不可',
+      webTest: '未調査',
+      codingTest: '未調査',
+      myPageStatus: '不要',
+      applicationUrl: 'https://example.com/aozora-product',
+      memo: '応募条件に合わない可能性を比較表示するための架空データ。',
+      scores: { salary: 3, benefits: 3, wlb: 3, remote: 4, flex: 4, overseas: 1, itFit: 3 },
+      events: [],
+      createdAt: fixedCreatedAt,
+      updatedAt: '2026-08-10T02:00:00.000Z',
+    },
+  ]
+}
