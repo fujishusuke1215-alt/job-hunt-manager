@@ -23,40 +23,35 @@ const watchEnvelope = JSON.stringify({
   }],
 })
 
-test('v2主要画面をWebアプリ部分だけ新Phaseへ撮影する', async ({ page }) => {
+test('Phase 20の主要画面をWebアプリ部分だけ撮影する', async ({ page }) => {
   await page.goto('/')
-  await page.screenshot({ path: 'docs/evidence/phase-17-v2-release/screenshots/01-v2-dashboard.png', fullPage: true })
-  await page.screenshot({ path: 'docs/portfolio/screenshots/v2-dashboard.png', fullPage: true })
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/01-home.png', fullPage: true })
 
-  await page.getByRole('button', { name: /企業・選考管理/ }).click()
-  await page.screenshot({ path: 'docs/evidence/phase-17-v2-release/screenshots/02-v2-company-list.png', fullPage: true })
+  await page.getByRole('button', { name: '企業・選考' }).click()
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/02-company-list.png', fullPage: true })
   await page.getByRole('button', { name: '＋ 企業を登録' }).click()
   await page.getByPlaceholder('例: 株式会社サンプルテック').fill('サンプルテック株式会社')
-  await page.screenshot({ path: 'docs/evidence/phase-13-company-master/screenshots/01-master-candidate.png', fullPage: true })
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/03-company-form.png', fullPage: true })
   await page.getByRole('button', { name: '閉じる' }).click()
 
   await page.getByRole('button', { name: '評価設定' }).click()
-  await page.screenshot({ path: 'docs/evidence/phase-12-configurable-scoring/screenshots/01-scoring-settings.png', fullPage: true })
-  await page.screenshot({ path: 'docs/portfolio/screenshots/v2-scoring.png', fullPage: true })
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/04-scoring-settings.png', fullPage: true })
 
-  await page.getByRole('button', { name: 'AI同期' }).click()
+  await page.getByRole('button', { name: 'AIから取り込む' }).click()
   await page.getByLabel('JSONを貼り付け').fill(watchEnvelope)
   await page.getByRole('button', { name: '検証して差分を見る' }).click()
-  await page.screenshot({ path: 'docs/evidence/phase-14-ai-sync-watch/screenshots/01-ai-diff-preview.png', fullPage: true })
-  await page.screenshot({ path: 'docs/portfolio/screenshots/v2-ai-sync.png', fullPage: true })
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/05-ai-import.png', fullPage: true })
   await page.getByRole('button', { name: /選択した 1件を反映/ }).click()
-  await page.getByRole('button', { name: 'Watch' }).click()
-  await page.screenshot({ path: 'docs/evidence/phase-14-ai-sync-watch/screenshots/02-watch-center.png', fullPage: true })
-  await page.screenshot({ path: 'docs/portfolio/screenshots/v2-watch.png', fullPage: true })
+  await page.getByRole('button', { name: '更新・通知' }).click()
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/06-updates.png', fullPage: true })
 
   await page.getByRole('button', { name: '本人用' }).click()
   await page.getByText('保存先は空です。最初の保存で新規作成します。').waitFor()
-  await page.screenshot({ path: 'docs/evidence/phase-15-google-drive/screenshots/01-local-development-mode.png', fullPage: true })
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/07-local-personal.png', fullPage: true })
 })
 
-test('v2モバイル画面をWebアプリ部分だけ撮影する', async ({ page }) => {
+test('Phase 20のモバイル画面をWebアプリ部分だけ撮影する', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  await page.screenshot({ path: 'docs/evidence/phase-17-v2-release/screenshots/03-v2-mobile-dashboard.png', fullPage: true })
-  await page.screenshot({ path: 'docs/portfolio/screenshots/v2-mobile-dashboard.png', fullPage: true })
+  await page.screenshot({ path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/08-mobile-home.png', fullPage: true })
 })

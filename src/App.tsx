@@ -26,6 +26,8 @@ import type {
   WatchFindingStatus,
 } from './domain/types'
 import { updateWatchFindingStatus } from './domain/watch'
+import { selectionLabel } from './domain/selection'
+import { saveProfileDraft } from './domain/profileManagement'
 import type { AuthAccount, AuthProvider } from './providers/auth'
 import { GoogleAuthProvider, loadGoogleIdentityServices } from './providers/googleAuth'
 import { GoogleDriveRestTransport, GoogleDriveStorageRepository } from './repositories/googleDriveStorage'
@@ -250,10 +252,12 @@ export default function App() {
   }
 
   const commitData = (next: AppDataV2) => {
-    if (mode === 'demo') setDemoData(next)
+    const activeNow = new Date().toISOString()
+    const withActivity = { ...next, userSettings: { ...next.userSettings, lastUserActiveAt: activeNow }, updatedAt: activeNow }
+    if (mode === 'demo') setDemoData(withActivity)
     else {
-      setPersonalData(next)
-      persistPersonal(next)
+      setPersonalData(withActivity)
+      persistPersonal(withActivity)
     }
   }
 
@@ -542,12 +546,15 @@ export default function App() {
     const now = new Date().toISOString()
     const companyId = formState?.kind === 'edit' ? formState.companyId : createId('user-company')
     const currentCompany = data.userCompanies.find((item) => item.id === companyId)
+    const stageChanged = !currentCompany || selectionLabel(currentCompany) !== selectionLabel(draft)
     const company = {
       ...draft,
       id: companyId,
       events: currentCompany?.events ?? [],
       createdAt: currentCompany?.createdAt ?? now,
       updatedAt: now,
+      selectionStageUpdatedAt: stageChanged ? now : currentCompany?.selectionStageUpdatedAt ?? now,
+      lastCompanyInteractionAt: now,
     }
     const existingEvaluation = getEvaluation(data, companyId, profile.id)
     const evaluation = {
@@ -624,7 +631,7 @@ export default function App() {
             <button className="primary-button" type="button" disabled={!runtime.googleClientId} onClick={enterGooglePersonal}>Googleアカウントで利用する</button>
           </div>
           {!runtime.googleClientId && <p className="welcome-setup-note" role="note">Google Client IDのRepository Variable設定後に本人用接続が有効になります。デモは現在も利用できます。</p>}
-          <small>Drive権限はappDataFolderだけです。Gmailや通常のマイドライブ全体にはアクセスしません。</small>
+          <small>このGoogleアカウントのDriveへ個人データを保存します。将来、採用メールの整理機能を追加する場合は、就活に使うGoogleアカウントを選ぶと設定が簡単になる可能性があります。ただし同じアカウントは必須ではなく、メール連携用アカウントは将来別に接続できる設計を想定しています。</small>
         </section>
       </main>
     )
@@ -661,7 +668,7 @@ export default function App() {
             <p className="eyebrow">PERSONAL MODE</p><h1 id="access-title">本人用データを開く</h1>
             <p>{runtime.storageMode === 'google' ? 'Google Drive appDataFolderから、自分のデータを読み込みます。要求するDrive権限はdrive.appdataだけです。' : '本番の本人用モードはGoogle設定後のみ利用できます。ローカル開発はVITE_STORAGE_MODE=localを明示してください。'}</p>
             {runtime.storageMode === 'google' && <button className="primary-button" type="button" onClick={() => void login()}>Googleでログインして読み込む</button>}
-            <small>アクセストークンはメモリだけで扱い、localStorageへ保存しません。Gmail権限は要求しません。</small>
+            <small>このGoogleアカウントのDriveへ個人データを保存します。将来のメール連携では別のGoogleアカウントも選べる設計を想定しています。現在Gmail権限は要求しません。</small>
           </section>
         ) : (
           <>
@@ -673,7 +680,7 @@ export default function App() {
             {view === 'data' && <DataTools mode={mode} data={data} storageLabel={storageLabel} syncStatus={mode === 'demo' ? 'synced' : personalSyncStatus} onPreviewImport={previewBackupImport} onCommitImport={commitBackupImport} onClear={() => commitData(createEmptyAppData())} onResetDemo={() => setDemoData(createDemoAppData())} />}
 
             {selectedView && <CompanyDetail view={selectedView} profile={profile} onClose={() => setSelectedId(null)} onEdit={() => { setFormState({ kind: 'edit', companyId: selectedView.company.id }); setSelectedId(null) }} onUpdateEvents={updateEvents} onSaveFact={saveFact} />}
-            {formState && <CompanyForm companyView={editingView} catalog={catalog} profile={profile} evaluation={editingView?.evaluation ?? null} onSubmit={saveCompany} onCancel={() => setFormState(null)} />}
+            {formState && <CompanyForm companyView={editingView} catalog={catalog} profile={profile} evaluation={editingView?.evaluation ?? null} onSubmit={saveCompany} onSaveProfile={(profileDraft) => commitData(saveProfileDraft(data, profileDraft))} onCancel={() => setFormState(null)} />}
           </>
         )}
       </fieldset>

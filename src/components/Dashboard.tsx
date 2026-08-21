@@ -1,4 +1,4 @@
-import { applicationStatuses } from '../domain/types'
+import { selectionLabel, selectionStatusOptions } from '../domain/selection'
 import type { CompanyView, WatchFinding } from '../domain/types'
 import { rankCompanyViews } from '../domain/selectors'
 import { buildTodayActions } from '../domain/watch'
@@ -73,8 +73,8 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
           <article className="panel status-panel">
             <div className="panel-heading compact"><div><p className="eyebrow">PIPELINE</p><h2>選考ステータス</h2></div><span className="panel-count">結果待ち {waitingCount}</span></div>
             <div className="status-bars">
-              {applicationStatuses.map((status) => {
-                const count = companies.filter((view) => view.company.applicationStatus === status).length
+              {selectionStatusOptions.map((status) => {
+                const count = companies.filter((view) => selectionLabel(view.company) === status).length
                 if (count === 0) return null
                 return <div className="status-bar-row" key={status}><div><span>{status}</span><strong>{count}</strong></div><span className="status-track"><span style={{ width: `${(count / companies.length) * 100}%` }} /></span></div>
               })}

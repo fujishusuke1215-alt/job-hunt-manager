@@ -131,7 +131,7 @@ describe('migrateV1Companies', () => {
       (profile) => profile.id === result.activeScoringProfileId,
     )
 
-    expect(legacyProfile?.name).toBe('Legacy v1')
+    expect(legacyProfile?.name).toBe('以前の評価設定')
     expect(legacyProfile?.kind).toBe('legacy')
     for (const company of companies) {
       const evaluation = result.evaluations.find((item) => item.userCompanyId === company.id)

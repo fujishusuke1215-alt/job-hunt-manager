@@ -458,7 +458,7 @@ describe('AI Sync validation and transaction flow', () => {
         name: profile.name,
         kind: profile.kind,
         criteria: profile.criteria.map((item) =>
-          item.id === criterion.id ? { ...item, scaleMax: 10 } : item,
+          item.id === criterion.id ? { ...item, scaleMax: 20 } : item,
         ),
       },
       evidence: [],

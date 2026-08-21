@@ -82,7 +82,7 @@ export function ScoringSettings({ data, onChange }: ScoringSettingsProps) {
         <div>
           <p className="eyebrow">SCORING PROFILE</p>
           <h1 id="scoring-title">評価設定</h1>
-          <p>自分の価値観に合わせて、項目・最大点・weight・表示順を変更できます。</p>
+          <p>企業ランキングで何を重視するかを設定します。給与を重視する場合は給与の重要度を大きく、働きやすさを重視する場合はワークライフバランス等の重要度を大きくしてください。重要度の合計が100でなくても比率として自動計算されます。</p>
         </div>
       </div>
 
@@ -95,9 +95,9 @@ export function ScoringSettings({ data, onChange }: ScoringSettingsProps) {
           </div>
           <div className="settings-body">
             <label className="field">
-              <span>Active profile</span>
+              <span>現在使用中の評価設定</span>
               <select
-                aria-label="Active profile"
+                aria-label="現在使用中の評価設定"
                 value={active.id}
                 onChange={(event) => onChange(setActiveProfile(data, event.target.value))}
               >
@@ -114,14 +114,14 @@ export function ScoringSettings({ data, onChange }: ScoringSettingsProps) {
               <button className="secondary-button" type="button" onClick={createProfile}>空で作成</button>
               <button className="secondary-button" type="button" onClick={duplicate}>現在設定を複製</button>
             </div>
-            <p className="settings-note">weight合計は100でなくても比率として正規化されます。</p>
+            <p className="settings-note">重要度の合計は100でなくても比率として正規化されます。</p>
           </div>
         </article>
 
         <article className="panel criteria-panel">
           <div className="panel-heading compact">
             <div><p className="eyebrow">CRITERIA</p><h2>評価項目</h2></div>
-            <span className="panel-count">有効weight {enabledWeight}</span>
+            <span className="panel-count">有効な重要度 {enabledWeight}</span>
           </div>
           <div className="settings-body">
             <label className="field">
@@ -150,7 +150,7 @@ export function ScoringSettings({ data, onChange }: ScoringSettingsProps) {
                     <label className="field"><span>項目名</span><input value={item.label} onChange={(event) => updateCriterion(item.id, { label: event.target.value })} /></label>
                     <label className="field"><span>説明</span><input value={item.description} onChange={(event) => updateCriterion(item.id, { description: event.target.value })} /></label>
                     <label className="field"><span>最大点</span><input type="number" min="0.1" step="0.1" value={item.scaleMax} onChange={(event) => updateCriterion(item.id, { scaleMax: Number(event.target.value) })} /></label>
-                    <label className="field"><span>weight</span><input type="number" min="0" step="0.5" value={item.weight} onChange={(event) => updateCriterion(item.id, { weight: Number(event.target.value) })} /></label>
+                    <label className="field"><span>重要度</span><input type="number" min="0" step="0.5" value={item.weight} onChange={(event) => updateCriterion(item.id, { weight: Number(event.target.value) })} /></label>
                   </div>
                   <button className="danger-link" type="button" onClick={() => removeCriterion(item.id)}>完全削除</button>
                 </article>
@@ -167,4 +167,3 @@ export function ScoringSettings({ data, onChange }: ScoringSettingsProps) {
     </section>
   )
 }
-

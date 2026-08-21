@@ -1,5 +1,16 @@
 export const applicationStatuses = [
   '検討中',
+  'マイページ作成済み',
+  'ES提出済み',
+  'Webテスト受験済み',
+  'コーディングテスト',
+  'グループディスカッション',
+  '1次面接',
+  '2次面接',
+  '3次面接',
+  '最終面接',
+  '不合格',
+  '選考管理を終了',
   '応募準備',
   'ES提出待ち',
   'Webテスト待ち',
@@ -11,6 +22,19 @@ export const applicationStatuses = [
 ] as const
 
 export type ApplicationStatus = (typeof applicationStatuses)[number]
+
+export const selectionPhases = [
+  'considering', 'mypage_created', 'es_submitted', 'web_test_completed',
+  'coding_test', 'group_discussion', 'interview_1', 'interview_2',
+  'interview_3', 'final_interview', 'awaiting_result', 'offer',
+] as const
+export type SelectionPhase = (typeof selectionPhases)[number]
+export const selectionStates = ['active', 'closed'] as const
+export type SelectionState = (typeof selectionStates)[number]
+export const closeReasons = ['rejected', 'user_closed', 'recruitment_closed', 'other'] as const
+export type CloseReason = (typeof closeReasons)[number]
+export const offerDecisions = ['considering', 'accepted', 'declined'] as const
+export type OfferDecision = (typeof offerDecisions)[number]
 
 export const priorities = ['A', 'B', 'C'] as const
 export type Priority = (typeof priorities)[number]
@@ -126,6 +150,12 @@ export interface UserCompany {
   applicationStatus: ApplicationStatus
   myPageStatus: MyPageStatus
   applicationUrl: string
+  selectionPhase?: SelectionPhase
+  selectionState?: SelectionState
+  closeReason?: CloseReason | null
+  offerDecision?: OfferDecision | null
+  selectionStageUpdatedAt?: string
+  lastCompanyInteractionAt?: string | null
   memo: string
   watchEnabled: boolean
   events: SelectionEvent[]
@@ -220,6 +250,8 @@ export interface WatchFinding {
 export interface UserSettings {
   includePersonalNotesInAiExport: boolean
   locale: 'ja-JP'
+  graduationYear: number | null
+  lastUserActiveAt: string | null
 }
 
 export interface MigrationHistoryEntry {
@@ -294,7 +326,10 @@ export interface UserCompanyDraft {
   applicationStatus: ApplicationStatus
   myPageStatus: MyPageStatus
   applicationUrl: string
+  selectionPhase: SelectionPhase
+  selectionState: SelectionState
+  closeReason: CloseReason | null
+  offerDecision: OfferDecision | null
   memo: string
   watchEnabled: boolean
 }
-

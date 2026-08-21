@@ -16,6 +16,8 @@ function valueText(value: unknown) {
   return String(value)
 }
 
+const aiPrompt = `Job Hunt Manager用のAiSyncEnvelopeV1 JSONだけを作成してください。推測で不明値を埋めず、不明な項目はoperationに含めません。各情報には可能な限り公式URL、確認日（ISO 8601）、対象卒年を付けてください。AI自身は一次情報ではないため、公式ページを整理した場合はevidence.typeを official_web、processedByAiを true にしてください。schemaVersion: 1、generatedAt、provider、operationsを含め、operationIdは重複しない値にしてください。`
+
 export function AiSync({ data, catalog, onChange }: AiSyncProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const providerRef = useRef(new ManualAiImportWatchProvider())
@@ -24,6 +26,17 @@ export function AiSync({ data, catalog, onChange }: AiSyncProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
+
+  const copyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(aiPrompt)
+      setIsError(false)
+      setMessage('AIに送るプロンプトをコピーしました。')
+    } catch {
+      setIsError(true)
+      setMessage('コピーできませんでした。ブラウザのクリップボード権限を確認してください。')
+    }
+  }
 
   const buildPreview = async (input = json) => {
     try {
@@ -77,14 +90,14 @@ export function AiSync({ data, catalog, onChange }: AiSyncProps) {
 
   return (
     <section className="page-stack" aria-labelledby="ai-sync-title">
-      <div className="page-heading compact-heading"><div><p className="eyebrow">MANUAL AI IMPORT</p><h1 id="ai-sync-title">AI同期</h1><p>ChatGPT等のJSONを検証し、差分を選んでから反映します。API課金や会話の自動取得はありません。</p></div></div>
+      <div className="page-heading compact-heading"><div><p className="eyebrow">MANUAL AI IMPORT</p><h1 id="ai-sync-title">AIから取り込む</h1><p>ChatGPTなどのAIで整理した企業情報を、このアプリにまとめて追加・更新できます。</p></div></div>
       <div className="notice" role="note">AIは一次情報ではありません。公式ページをAIが整理した場合も、出典は official_web、processedByAi は別に記録します。</div>
       {message && <div className={isError ? 'notice error' : 'notice success'} role="status">{message}</div>}
 
       <article className="panel ai-input-panel">
-        <div className="panel-heading compact"><div><p className="eyebrow">INPUT</p><h2>AI Sync JSON</h2></div></div>
+        <div className="panel-heading compact"><div><p className="eyebrow">3 STEPS</p><h2>AIから情報を取り込む</h2><ol className="simple-list"><li>サンプルプロンプトをAIへ送る</li><li>AIにJob Hunt Manager用データを作成させる</li><li>このページへJSONを貼り付ける、またはファイルを選択する</li></ol></div><button className="secondary-button" type="button" onClick={() => void copyPrompt()}>AIに送るプロンプトをコピー</button></div>
         <div className="settings-body">
-          <label className="field"><span>JSONを貼り付け</span><textarea rows={12} value={json} onChange={(event) => setJson(event.target.value)} placeholder="AI_SYNC_FORMAT.mdのAiSyncEnvelopeV1を貼り付け" /></label>
+          <label className="field"><span>AIが作成したデータを貼り付け</span><textarea aria-label="JSONを貼り付け" rows={12} value={json} onChange={(event) => setJson(event.target.value)} placeholder="Job Hunt Manager用JSONを貼り付け" /></label>
           <input ref={fileRef} className="sr-only" id="ai-sync-file" type="file" accept="application/json,.json" onChange={(event) => event.target.files?.[0] && void readFile(event.target.files[0])} />
           <div className="inline-actions start"><label className="secondary-button label-button" htmlFor="ai-sync-file">JSONファイルを選ぶ</label><button className="primary-button" type="button" onClick={() => void buildPreview()}>検証して差分を見る</button></div>
         </div>

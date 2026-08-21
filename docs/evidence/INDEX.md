@@ -22,6 +22,7 @@
 | 17 | v2リリース監査 | `phase-17-v2-release/screenshots/01-v2-dashboard.png` | 証跡保護・安全監査・公開準備 | 完了 |
 | 18 | 無料公開デモ | `phase-18-public-deployment/screenshots/01-live-public-demo.png` | GitHub Pages・最小公開payload・無料条件 | 公開中 |
 | 19 | Pages + Google本人用 | `phase-19-github-pages-google-drive/screenshots/01-public-entry.png` | GIS・Drive・再接続・端末移行・account分離 | Mock/E2E完了／実Google未確認 |
+| 20 | UX・選考状態・一般向け評価 | `phase-20-ux-selection-generalization/README.md` | 選考の意味分離・10点評価・初心者導線 | 完了 |
 
 ## v2を学ぶ順番
 

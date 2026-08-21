@@ -1,13 +1,17 @@
 import { z } from 'zod'
 import {
   applicationStatuses,
+  closeReasons,
   eventStatuses,
   eventTypes,
   masterCompanyStatuses,
   myPageStatuses,
   priorities,
+  offerDecisions,
   reviewStatuses,
   sourceTypes,
+  selectionPhases,
+  selectionStates,
   verificationLevels,
   watchFindingStatuses,
   watchFindingTypes,
@@ -147,6 +151,12 @@ export const userCompanySchema = z.object({
   applicationStatus: z.enum(applicationStatuses),
   myPageStatus: z.enum(myPageStatuses),
   applicationUrl: safeUrlSchema,
+  selectionPhase: z.enum(selectionPhases).optional().default('considering'),
+  selectionState: z.enum(selectionStates).optional().default('active'),
+  closeReason: z.enum(closeReasons).nullable().optional().default(null),
+  offerDecision: z.enum(offerDecisions).nullable().optional().default(null),
+  selectionStageUpdatedAt: z.string().datetime().optional().default(() => new Date(0).toISOString()),
+  lastCompanyInteractionAt: z.string().datetime().nullable().optional().default(null),
   memo: z.string(),
   watchEnabled: z.boolean(),
   events: z.array(selectionEventSchema),
@@ -251,6 +261,8 @@ export const appDataV2Schema = z.object({
   userSettings: z.object({
     includePersonalNotesInAiExport: z.boolean(),
     locale: z.literal('ja-JP'),
+    graduationYear: z.number().int().min(1900).max(3000).nullable().optional().default(null),
+    lastUserActiveAt: z.string().datetime().nullable().optional().default(null),
   }).strict(),
   migrationHistory: z.array(z.object({
     id: z.string().min(1),
@@ -385,11 +397,11 @@ export const appDataV2Schema = z.object({
             path: ['evaluations', evaluationIndex, 'values', criterionId],
             message: '評価値が参照するCriterion IDがプロファイルに存在しません。',
           })
-        } else if (score !== null && (score < 0 || score > criterion.scaleMax)) {
+        } else if (score !== null && (!Number.isInteger(score) || score < 0 || score > criterion.scaleMax)) {
           context.addIssue({
             code: 'custom',
             path: ['evaluations', evaluationIndex, 'values', criterionId],
-            message: `評価値は0以上${criterion.scaleMax}以下にしてください。`,
+            message: `評価値は0以上${criterion.scaleMax}以下の整数にしてください。`,
           })
         }
       })

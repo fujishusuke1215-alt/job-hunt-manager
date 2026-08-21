@@ -5,6 +5,7 @@ import { isSafeHttpUrl } from '../domain/schemas'
 import { deadlineTone, formatDeadlineLabel } from '../utils/deadlines'
 import { createId } from '../utils/id'
 import { ResearchFactsPanel } from './ResearchFactsPanel'
+import { selectionLabel } from '../domain/selection'
 
 interface CompanyDetailProps {
   view: CompanyView
@@ -73,7 +74,7 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
       <section className="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="company-detail-title">
         <div className="detail-hero">
           <div>
-            <div className="chip-row"><span className={`priority priority-${company.manualPriority.toLowerCase()}`}>優先度 {company.manualPriority}</span><span className="status-chip">{company.applicationStatus}</span><span className="eligibility-chip">{view.master ? 'Master連携' : '独自企業'}</span></div>
+            <div className="chip-row"><span className="status-chip">{selectionLabel(company)}</span></div>
             <h2 id="company-detail-title">{view.displayName}</h2>
             <p>{company.role || '職種未設定'} · {company.applicationCategory || '応募区分未設定'}</p>
           </div>
@@ -89,14 +90,13 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
 
           <div className="detail-grid">
             <section className="detail-section">
-              <h3>応募・紐付け情報</h3>
+              <h3>応募情報</h3>
               <dl className="fact-list">
-                <div><dt>入力名</dt><dd>{company.userEnteredName}</dd></div>
-                <div><dt>Master ID</dt><dd>{company.masterCompanyId ?? '未紐付け'}</dd></div>
+                <div><dt>企業名</dt><dd>{company.userEnteredName}</dd></div>
                 <div><dt>MyPage</dt><dd>{company.myPageStatus}</dd></div>
                 <div><dt>Watch</dt><dd>{company.watchEnabled ? '有効' : '無効'}</dd></div>
               </dl>
-              {company.applicationUrl && isSafeHttpUrl(company.applicationUrl) && <a className="external-link" href={company.applicationUrl} target="_blank" rel="noreferrer">応募ページを開く ↗</a>}
+              {company.applicationUrl && isSafeHttpUrl(company.applicationUrl) && <a className="external-link" href={company.applicationUrl} target="_blank" rel="noreferrer">企業・採用ページを開く ↗</a>}
             </section>
 
             <section className="detail-section score-breakdown">

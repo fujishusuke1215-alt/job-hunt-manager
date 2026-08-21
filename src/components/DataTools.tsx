@@ -44,7 +44,7 @@ export function DataTools({
   const exportData = () => {
     downloadJson(createV2Backup(data), `job-hunt-manager-backup-v2-${new Date().toISOString().slice(0, 10)}.json`)
     setIsError(false)
-    setMessage('schemaVersion 2のJSONバックアップを書き出しました。')
+    setMessage('バックアップファイルを保存しました。')
   }
 
   const exportForAi = () => {
@@ -97,7 +97,7 @@ export function DataTools({
 
   return (
     <section className="page-stack" aria-labelledby="data-title">
-      <div className="page-heading compact-heading"><div><p className="eyebrow">DATA &amp; PRIVACY</p><h1 id="data-title">データ管理</h1><p>保存先を確認し、検証・プレビュー・承認の順で安全に取り込みます。</p></div></div>
+      <div className="page-heading compact-heading"><div><p className="eyebrow">DATA &amp; PRIVACY</p><h1 id="data-title">データ管理</h1><p>企業・選考情報のバックアップ保存や復元を行うページです。</p></div></div>
 
       <div className={`mode-banner ${mode}`}>
         <div className="mode-banner-icon" aria-hidden="true">{mode === 'demo' ? 'D' : 'P'}</div>
@@ -113,8 +113,8 @@ export function DataTools({
       )}
 
       <div className="data-card-grid">
-        <article className="data-card"><span className="data-card-number">01</span><h2>v2バックアップ</h2><p>{data.userCompanies.length}社、評価設定、Fact、WatchをschemaVersion 2で書き出します。</p><button className="secondary-button" type="button" onClick={exportData}>JSONを書き出す</button></article>
-        <article className="data-card"><span className="data-card-number">02</span><h2>安全に読み込む</h2><p>v1とv2に対応。まずruntime validationし、プレビュー後にだけ反映します。</p><input ref={fileRef} className="sr-only" id="backup-file" type="file" accept="application/json,.json" disabled={isCommitting} onChange={(event) => event.target.files?.[0] && void previewFile(event.target.files[0])} /><label className="secondary-button label-button" htmlFor="backup-file">JSONを選ぶ</label></article>
+        <article className="data-card"><span className="data-card-number">01</span><h2>バックアップを保存</h2><p>現在登録している企業・評価・選考情報を1つのファイルとして手元に保存します。PC変更時や万一に備えたバックアップとして利用できます。</p><button className="secondary-button" type="button" onClick={exportData}>バックアップファイルを保存</button><small>ファイル形式：JSON</small></article>
+        <article className="data-card"><span className="data-card-number">02</span><h2>バックアップから復元</h2><p>以前Job Hunt Managerから保存したバックアップファイルを読み込み、企業・選考情報を復元します。</p><input aria-label="JSONを選ぶ" ref={fileRef} className="sr-only" id="backup-file" type="file" accept="application/json,.json" disabled={isCommitting} onChange={(event) => event.target.files?.[0] && void previewFile(event.target.files[0])} /><label className="secondary-button label-button" htmlFor="backup-file">バックアップファイルを選択</label></article>
         <article className="data-card"><span className="data-card-number">03</span><h2>AI分析用</h2><p>ChatGPT等へ渡す構造化JSONです。既定では企業メモ・イベントメモ・選考場所を除きます。</p><label className="toggle-field"><input type="checkbox" checked={includeNotes} onChange={(event) => setIncludeNotes(event.target.checked)} /><span>個人メモ・選考場所も含める</span></label><button className="secondary-button" type="button" onClick={exportForAi}>AI分析用を書き出す</button></article>
         <article className="data-card caution"><span className="data-card-number">04</span><h2>{mode === 'demo' ? 'デモを初期化' : '本人用データを削除'}</h2><p>{mode === 'demo' ? '編集した架空データを初期状態へ戻します。' : 'バックアップがなければ復元できません。'}</p><button className={mode === 'demo' ? 'secondary-button' : 'danger-button'} type="button" onClick={mode === 'demo' ? onResetDemo : clearData}>{mode === 'demo' ? 'デモを初期化' : 'すべて削除'}</button></article>
       </div>

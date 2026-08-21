@@ -97,7 +97,7 @@ test('Demo→Google A→Drive保存→logout→Google Bで個人データを分�
 
   await expect(page.getByRole('heading', { name: '就活の情報を、次の行動へ。' })).toBeVisible()
   await page.screenshot({
-    path: 'docs/evidence/phase-19-github-pages-google-drive/screenshots/01-public-entry.png',
+    path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/09-google-entry.png',
     fullPage: true,
   })
   await page.getByRole('button', { name: 'デモを見る' }).click()
@@ -106,7 +106,7 @@ test('Demo→Google A→Drive保存→logout→Google Bで個人データを分�
   await page.getByRole('button', { name: 'Googleでログインして読み込む' }).click()
   await expect(page.getByLabel(/Google接続済み a@example.com/)).toBeVisible()
   await page.screenshot({
-    path: 'docs/evidence/phase-19-github-pages-google-drive/screenshots/02-google-personal-mock.png',
+    path: 'docs/evidence/phase-20-ux-selection-generalization/screenshots/10-google-personal-mock.png',
     fullPage: true,
   })
 

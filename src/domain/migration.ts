@@ -3,6 +3,7 @@ import type { LegacyCompanyV1 } from './v1'
 import { legacyBackupV1Schema, legacyCompaniesV1Schema } from './v1'
 import { createDeveloperReferenceProfile, createGeneralScoringProfile, createLegacyV1Profile } from './scoring'
 import { createId } from '../utils/id'
+import { selectionFromLegacy } from './selection'
 
 export const V1_STORAGE_KEY = 'job-hunt-manager:personal-companies:v1'
 export const V2_STORAGE_KEY = 'job-hunt-manager:app-data:v2'
@@ -81,7 +82,7 @@ export function createEmptyAppData(now = new Date().toISOString()): AppDataV2 {
     evaluations: [],
     watchRuns: [],
     watchFindings: [],
-    userSettings: { includePersonalNotesInAiExport: false, locale: 'ja-JP' },
+    userSettings: { includePersonalNotesInAiExport: false, locale: 'ja-JP', graduationYear: null, lastUserActiveAt: null },
     migrationHistory: [],
     aiImportHistory: [],
     processedOperationIds: [],
@@ -103,9 +104,11 @@ export function migrateV1Companies(
     applicationCategory: company.applicationCategory,
     manualPriority: company.priority,
     interest: Math.min(5, Math.max(0, company.interest)),
-    applicationStatus: company.status,
     myPageStatus: company.myPageStatus,
     applicationUrl: safeApplicationUrl(company.applicationUrl),
+    ...selectionFromLegacy(company.status),
+    selectionStageUpdatedAt: company.updatedAt || now,
+    lastCompanyInteractionAt: company.updatedAt || now,
     memo: company.memo,
     watchEnabled: true,
     events: company.events.map((event) => ({ ...event })),
@@ -139,7 +142,7 @@ export function migrateV1Companies(
     })),
     watchRuns: [],
     watchFindings: [],
-    userSettings: { includePersonalNotesInAiExport: false, locale: 'ja-JP' },
+    userSettings: { includePersonalNotesInAiExport: false, locale: 'ja-JP', graduationYear: null, lastUserActiveAt: null },
     migrationHistory: [{
       id: createId('migration'),
       fromVersion: 1,
@@ -154,4 +157,3 @@ export function migrateV1Companies(
     updatedAt: now,
   }
 }
-

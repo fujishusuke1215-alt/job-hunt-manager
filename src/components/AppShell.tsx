@@ -20,11 +20,11 @@ interface AppShellProps {
 }
 
 const navItems: { view: ViewName; label: string; short: string }[] = [
-  { view: 'dashboard', label: 'ダッシュボード', short: '概要' },
-  { view: 'companies', label: '企業・選考管理', short: '企業' },
+  { view: 'dashboard', label: 'ホーム', short: '概要' },
+  { view: 'companies', label: '企業・選考', short: '企業' },
   { view: 'scoring', label: '評価設定', short: '評価' },
-  { view: 'ai-sync', label: 'AI同期', short: 'AI' },
-  { view: 'watch', label: 'Watch', short: '監視' },
+  { view: 'ai-sync', label: 'AIから取り込む', short: 'AI' },
+  { view: 'watch', label: '更新・通知', short: '更新' },
   { view: 'data', label: 'データ管理', short: '保存' },
 ]
 

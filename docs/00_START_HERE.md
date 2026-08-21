@@ -8,10 +8,10 @@ Job Hunt Manager v2は、応募・検討企業を登録した後の「選考、�
 
 1. [公開サイト](https://fujishusuke1215-alt.github.io/job-hunt-manager/)を開く。またはPowerShellで `pnpm run dev` を実行し、表示URLを開く。
 2. 公開サイトでは「デモを見る」を押す。Google Client ID設定後は「Googleアカウントで利用する」も選べる。
-3. 「企業・選考管理」で検索、企業カード、選考予定を試す。
+3. 「企業・選考」で検索、企業カード、選考予定を試す。
 4. 「評価設定」でプロファイルを複製し、評価項目を変更する。
-5. 「AI同期」で `docs/09_AI_SYNC_FORMAT.md` の架空JSONをpreviewする。
-6. 「Watch」で、承認済みの変化だけが表示されることを確認する。
+5. 「AIから取り込む」で `docs/09_AI_SYNC_FORMAT.md` の架空JSONをpreviewする。
+6. 「更新・通知」で、承認済みの変化だけが表示されることを確認する。
 7. 本人用を押し、「ローカル開発モード」と明示されることを確認する。
 
 ## 読む順番

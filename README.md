@@ -27,14 +27,15 @@ pnpm run dev
 - `本人用`: 開発時は「ローカル開発モード」と明示してlocalStorageへ保存する。
 - Google設定後の本人用: Googleログイン後、Driveの非表示領域 `appDataFolder` を保存先にする。
 
-基本操作は「企業・選考管理 → 企業を登録 → 企業カード → 選考予定やResearch Factを追加」です。評価項目は「評価設定」、ChatGPT等からの候補は「AI同期」、承認した変化は「Watch」で管理します。詳しい手順は [はじめに読む資料](docs/00_START_HERE.md) にあります。
+基本操作は「企業・選考 → 企業を登録 → 企業カード → 選考予定や企業情報を追加」です。評価項目は「評価設定」、ChatGPT等からの候補は「AIから取り込む」、承認した変化は「更新・通知」で管理します。詳しい手順は [はじめに読む資料](docs/00_START_HERE.md) にあります。
 
 ## v2でできること
 
 - User CompanyとCompany Masterを分離し、名称変更に影響されない恒久IDで任意に紐付け
 - 企業CRUD、選考イベントCRUD、ステータス、締切、面接、メモ
 - 企業名・職種・メモ・Research Fact検索、複合フィルター、4種類の並び替え
-- 項目名、説明、最大点、weight、有効/無効、順序を変更できるScoring Profile
+- 項目名、説明、最大点、重要度、有効/無効、順序を変更できる評価設定。新規・デモは10点満点のバランス型
+- 選考段階、終了理由、内定後の判断を分け、「不合格」と「選考管理を終了」を区別
 - 未評価を0点にしない暫定スコアと評価充足率
 - 値、出典、確認日、対象年度、確認レベル、AI整理有無を分けるResearch Fact
 - Zodで検証するAI Sync JSON、差分preview、個別選択、追加確認後の反映
@@ -105,7 +106,7 @@ pnpm run test:e2e
 - TypeScript: 成功
 - ESLint: 成功
 - production build: 成功
-- unit/component: 130件成功（25ファイル）
+- unit/component: 133件成功（26ファイル）
 - Microsoft Edge E2E: 従来8件＋Google/Driveモック1件、計9件成功
 - Google Auth/Drive: Mock/contractまで成功、実Googleアカウント未試験
 

@@ -53,6 +53,13 @@
 - [x] 同一Envelope内の企業作成から関連Fact/Event/Findingまでoperation順でpreviewし、commit後もv2全体を再検証する。
 - [x] completed findingを同一importでnewへ戻さない。
 - [x] Watch Centerでnew、要対応、完了、企業、severityを確認できる。
+
+## Phase 20 UX・選考状態
+
+- [x] 通常UIからCompany Master、恒久ID、手動優先度A/B/Cを外し、企業名・URLによる内部候補照合を維持した。
+- [x] 選考段階、終了状態、終了理由、内定後判断を分離し、「不合格」と「選考管理を終了」を区別した。
+- [x] 新規・デモの評価は10点満点のバランス型、旧v1評価は「以前の評価設定」として互換を維持した。
+- [x] 匿名統計に備える時刻・卒業年は個人データだけに保存し、共有backend・Gmail scope・匿名送信は追加していない。
 - [x] AI分析用exportはtoken/secretを含まず、個人メモ・選考場所・イベントメモは明示opt-inである。
 
 ## Google・Storage

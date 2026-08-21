@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
-import { applicationStatuses, eligibilityOptions, priorities } from '../domain/types'
+import { eligibilityOptions } from '../domain/types'
 import type { CompanyFilters, CompanyView } from '../domain/types'
 import { deadlineTone, formatDeadlineLabel, getDaysUntil, getMostUrgentEvent } from '../utils/deadlines'
+import { selectionLabel, selectionStatusOptions } from '../domain/selection'
 
 interface CompanyListProps {
   companies: CompanyView[]
@@ -25,7 +26,7 @@ function filterAndSort(views: CompanyView[], filters: CompanyFilters) {
       ...view.facts.flatMap((fact) => [fact.label, fact.value]),
     ].join(' ').toLocaleLowerCase('ja')
     if (query && !searchable.includes(query)) return false
-    if (filters.status !== 'すべて' && view.company.applicationStatus !== filters.status) return false
+    if (filters.status !== 'すべて' && selectionLabel(view.company) !== filters.status) return false
     if (filters.priority !== 'すべて' && view.company.manualPriority !== filters.priority) return false
     if (filters.eligibility !== 'すべて' && !view.facts.some((fact) => fact.value === filters.eligibility)) return false
     const urgent = getMostUrgentEvent(view.company)
@@ -65,8 +66,7 @@ export function CompanyList({ companies, filters, onFiltersChange, onOpen, onEdi
 
       <div className="filter-panel">
         <label className="search-field"><span className="sr-only">企業を検索</span><span aria-hidden="true">⌕</span><input value={filters.query} onChange={(event) => update('query', event.target.value)} placeholder="企業名・職種・メモ・調査情報を検索" /></label>
-        <label><span>ステータス</span><select value={filters.status} onChange={(event) => update('status', event.target.value as CompanyFilters['status'])}><option>すべて</option>{applicationStatuses.map((item) => <option key={item}>{item}</option>)}</select></label>
-        <label><span>優先度</span><select value={filters.priority} onChange={(event) => update('priority', event.target.value as CompanyFilters['priority'])}><option>すべて</option>{priorities.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label><span>現在の選考状況</span><select value={filters.status} onChange={(event) => update('status', event.target.value as CompanyFilters['status'])}><option>すべて</option>{selectionStatusOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label><span>応募資格Fact</span><select value={filters.eligibility} onChange={(event) => update('eligibility', event.target.value as CompanyFilters['eligibility'])}><option>すべて</option>{eligibilityOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
         <label><span>締切</span><select value={filters.deadline} onChange={(event) => update('deadline', event.target.value as CompanyFilters['deadline'])}><option>すべて</option><option>7日以内</option><option>期限超過</option><option>期限なし</option></select></label>
         <label><span>並び替え</span><select value={filters.sort} onChange={(event) => update('sort', event.target.value as CompanyFilters['sort'])}><option>締切が近い順</option><option>総合点が高い順</option><option>更新が新しい順</option><option>企業名順</option></select></label>
@@ -81,12 +81,11 @@ export function CompanyList({ companies, filters, onFiltersChange, onOpen, onEdi
               <article className="company-card" key={view.company.id}>
                 <button className="company-card-main" type="button" onClick={() => onOpen(view.company.id)}>
                   <div className="company-card-topline">
-                    <span className={`priority priority-${view.company.manualPriority.toLowerCase()}`}>優先度 {view.company.manualPriority}</span>
                     <span className="company-score"><strong>{view.score.score === null ? '—' : view.score.score.toFixed(1)}</strong><small> / 100</small></span>
                   </div>
                   <h2>{view.displayName}</h2>
                   <p>{view.company.role || '職種未設定'} · {view.master ? 'Master連携' : '独自企業'}</p>
-                  <div className="chip-row"><span className="status-chip">{view.company.applicationStatus}</span>{view.score.provisional && <span className="eligibility-chip">暫定・充足率 {view.score.coverage}%</span>}</div>
+                  <div className="chip-row"><span className="status-chip">{selectionLabel(view.company)}</span>{view.score.provisional && <span className="eligibility-chip">暫定・充足率 {view.score.coverage}%</span>}</div>
                   <div className="card-deadline">
                     {urgent ? <><span className={`deadline-pip ${deadlineTone(urgent.scheduledAt)}`} /><span><strong>{urgent.title}</strong><small>{new Date(urgent.scheduledAt).toLocaleString('ja-JP')}</small></span><em className={deadlineTone(urgent.scheduledAt)}>{formatDeadlineLabel(urgent.scheduledAt)}</em></> : <span className="no-deadline">未完了の予定なし</span>}
                   </div>

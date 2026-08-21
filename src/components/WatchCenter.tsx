@@ -44,8 +44,8 @@ export function WatchCenter({ companies, findings, runs, onStatusChange, onOpenC
 
   return (
     <section className="page-stack" aria-labelledby="watch-title">
-      <div className="page-heading compact-heading"><div><p className="eyebrow">WATCH CENTER</p><h1 id="watch-title">採用情報Watch</h1><p>AI Syncで承認した変化を保存し、確認・完了まで追跡します。</p></div></div>
-      <div className="notice" role="note">現在は手動AI JSON取込だけです。Gmailや採用Webの自動巡回、バックグラウンド定期実行はまだありません。</div>
+      <div className="page-heading compact-heading"><div><p className="eyebrow">UPDATES</p><h1 id="watch-title">更新・通知</h1><p>AIや、将来追加予定のメール連携などで見つかった、登録企業の新しい情報を確認するページです。</p></div></div>
+      <div className="notice" role="note">現在は手動AI JSON取込だけです。Gmailや採用Webの自動巡回、バックグラウンド定期実行はまだありません。現在はGmailや採用ページを自動監視しているわけではなく、AIから取り込んだ更新情報等がここに表示されます。</div>
 
       <div className="metric-grid">
         <article className="metric-card featured"><span>新しい発見</span><strong>{enabledFindings.filter((item) => item.status === 'new').length}</strong><small>未確認</small></article>

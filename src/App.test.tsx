@@ -51,7 +51,7 @@ describe('Job Hunt Manager', () => {
   it('検索で企業を絞り込む', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /企業・選考管理/ }))
+    await user.click(screen.getByRole('button', { name: /企業・選考/ }))
     await user.type(screen.getByPlaceholderText('企業名・職種・メモ・調査情報を検索'), 'みらい')
 
     expect(screen.getByRole('heading', { name: 'みらいデジタル' })).toBeInTheDocument()
@@ -76,7 +76,7 @@ describe('Job Hunt Manager', () => {
   it('企業詳細から選考予定を追加してステータスを表示する', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: /企業・選考管理/ }))
+    await user.click(screen.getByRole('button', { name: /企業・選考/ }))
     await user.click(screen.getByRole('heading', { name: 'サンプルテック' }).closest('button')!)
     const dialog = screen.getByRole('dialog', { name: 'サンプルテック' })
     await user.type(within(dialog).getByPlaceholderText('例: 一次面接'), '最終面接')
@@ -89,7 +89,7 @@ describe('Job Hunt Manager', () => {
   it('既存の選考予定を編集して完了へ変更する', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByRole('button', { name: '企業・選考管理' }))
+    await user.click(screen.getByRole('button', { name: '企業・選考' }))
     await user.click(screen.getByRole('heading', { name: 'サンプルテック' }).closest('button')!)
     const dialog = screen.getByRole('dialog', { name: 'サンプルテック' })
     await user.click(within(dialog).getAllByRole('button', { name: '編集' })[0])

@@ -122,7 +122,7 @@ export function addCriterionToProfile(
     id: criterionId,
     label: '新しい評価項目',
     description: '',
-    scaleMax: 5,
+    scaleMax: 10,
     weight: 10,
     enabled: true,
     order: profile.criteria.length,
@@ -155,7 +155,10 @@ export function setEvaluationValue(
   const profile = data.scoringProfiles.find((item) => item.id === profileId)
   const criterion = profile?.criteria.find((item) => item.id === criterionId)
   if (!profile || !criterion) throw new Error('評価項目が見つかりません。')
-  const normalized = value === null ? null : Math.min(criterion.scaleMax, Math.max(0, value))
+  if (value !== null && (!Number.isInteger(value) || value < 0 || value > criterion.scaleMax)) {
+    throw new Error(`評価は0から${criterion.scaleMax}までの整数で入力してください。`)
+  }
+  const normalized = value === null ? null : value
   const existing = data.evaluations.find(
     (evaluation) => evaluation.userCompanyId === userCompanyId && evaluation.scoringProfileId === profileId,
   )
@@ -173,4 +176,3 @@ export function setEvaluationValue(
     }]
   return touch({ ...data, evaluations }, now)
 }
-

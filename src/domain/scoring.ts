@@ -9,22 +9,23 @@ const criterion = (
   description: string,
   weight: number,
   order: number,
-  scaleMax = 5,
+  scaleMax = 10,
 ): Criterion => ({ id, label, description, scaleMax, weight, enabled: true, order })
 
 export function createGeneralScoringProfile(now = new Date().toISOString()): ScoringProfile {
   return {
     id: 'profile_general_v2',
-    name: '一般テンプレート',
+    name: 'バランス型',
     kind: 'built_in',
     criteria: [
       criterion('criterion_general_compensation', '給与・待遇', '給与水準と待遇の総合評価', 20, 0),
-      criterion('criterion_general_wlb', 'WLB', '休暇、残業、働きやすさ', 20, 1),
-      criterion('criterion_general_flexibility', '働き方の柔軟性', 'リモートとフレックス', 15, 2),
-      criterion('criterion_general_benefits', '福利厚生', '住宅・休暇・手当等', 10, 3),
-      criterion('criterion_general_role_fit', '職種との一致', '希望する仕事との一致', 15, 4),
-      criterion('criterion_general_stability', '安定性・勤務地', '事業安定性と勤務地', 10, 5),
-      criterion('criterion_general_interest', '志望度', '本人が働きたい度合い', 10, 6),
+      criterion('criterion_general_wlb', 'ワークライフバランス', '休暇、残業、働きやすさ', 20, 1),
+      criterion('criterion_general_role_fit', '仕事内容との一致', '希望する仕事との一致', 20, 2),
+      criterion('criterion_general_flexibility', 'リモート・フレックス等の働き方', '場所と時間の柔軟性', 15, 3),
+      criterion('criterion_general_benefits', '福利厚生', '住宅・休暇・手当等', 10, 4),
+      criterion('criterion_general_location', '勤務地・転勤', '勤務地や転勤の考え方との一致', 5, 5),
+      criterion('criterion_general_stability', '企業の安定性・将来性', '事業の安定性と将来性', 5, 6),
+      criterion('criterion_general_global', '海外勤務・グローバルな機会', '海外に関わる機会', 5, 7),
     ],
     createdAt: now,
     updatedAt: now,
@@ -55,17 +56,17 @@ export function createDeveloperReferenceProfile(now = new Date().toISOString()):
 export function createLegacyV1Profile(now = new Date().toISOString()): ScoringProfile {
   return {
     id: 'profile_legacy_v1',
-    name: 'Legacy v1',
+    name: '以前の評価設定',
     kind: 'legacy',
     criteria: [
-      criterion('criterion_legacy_salary', '給与', 'v1から移行', 10, 0),
-      criterion('criterion_legacy_benefits', '福利厚生', 'v1から移行', 10, 1),
-      criterion('criterion_legacy_wlb', 'WLB', 'v1から移行', 25, 2),
-      criterion('criterion_legacy_remote', 'リモート', 'v1から移行', 7.5, 3),
-      criterion('criterion_legacy_flex', 'フレックス', 'v1から移行', 7.5, 4),
-      criterion('criterion_legacy_overseas', '海外可能性', 'v1から移行', 10, 5),
-      criterion('criterion_legacy_it_fit', 'IT/DX一致', 'v1から移行', 15, 6),
-      criterion('criterion_legacy_interest', '志望度', 'v1から移行', 15, 7),
+      criterion('criterion_legacy_salary', '給与', 'v1から移行', 10, 0, 5),
+      criterion('criterion_legacy_benefits', '福利厚生', 'v1から移行', 10, 1, 5),
+      criterion('criterion_legacy_wlb', 'ワークライフバランス', 'v1から移行', 25, 2, 5),
+      criterion('criterion_legacy_remote', 'リモート', 'v1から移行', 7.5, 3, 5),
+      criterion('criterion_legacy_flex', 'フレックス', 'v1から移行', 7.5, 4, 5),
+      criterion('criterion_legacy_overseas', '海外可能性', 'v1から移行', 10, 5, 5),
+      criterion('criterion_legacy_it_fit', 'IT/DX一致', 'v1から移行', 15, 6, 5),
+      criterion('criterion_legacy_interest', '志望度', 'v1から移行', 15, 7, 5),
     ],
     createdAt: now,
     updatedAt: now,
@@ -144,4 +145,3 @@ export function cloneScoringProfile(
     updatedAt: now,
   }
 }
-

@@ -51,7 +51,7 @@ describe('profile management', () => {
     const profile = data.scoringProfiles[0]
     const draft = {
       ...profile,
-      criteria: profile.criteria.map((item) => item.id === 'criterion_general_wlb' ? { ...item, scaleMax: 10 } : item),
+      criteria: profile.criteria.map((item) => item.id === 'criterion_general_wlb' ? { ...item, scaleMax: 20 } : item),
     }
     const saved = saveProfileDraft(data, draft, now)
     expect(saved.evaluations[0].values.criterion_general_wlb).toBe(8)
@@ -73,4 +73,3 @@ describe('profile management', () => {
     expect(deleted.evaluations[0].values).not.toHaveProperty('criterion_general_wlb')
   })
 })
-
