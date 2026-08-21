@@ -25,9 +25,7 @@ jobs:
           node-version: '22.12.0'
 
       - name: Enable the locked pnpm version
-        run: |
-          corepack enable
-          corepack prepare pnpm@11.19.0 --activate
+        run: npm install --global pnpm@11.19.0
 
       - name: Install dependencies from lockfile
         run: pnpm install --frozen-lockfile
