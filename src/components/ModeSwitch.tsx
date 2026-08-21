@@ -1,4 +1,4 @@
-import type { AppMode } from '../types'
+import type { AppMode } from '../domain/types'
 
 interface ModeSwitchProps {
   mode: AppMode
@@ -27,4 +27,3 @@ export function ModeSwitch({ mode, onChange }: ModeSwitchProps) {
     </div>
   )
 }
-
