@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createEmptyAppData } from '../domain/migration'
+import { createDemoCompanies } from '../data/demoData'
+import { createEmptyAppData, V1_BACKUP_PREFIX } from '../domain/migration'
 import type { AppDataV2 } from '../domain/types'
 import {
   GoogleDriveRequestError,
@@ -123,6 +124,27 @@ describe('GoogleDriveStorageRepository', () => {
     if (saved.status !== 'saved') throw new Error('expected saved')
     expect(saved.data.revision).toBe(loaded.data.revision + 1)
     expect(transport.updateCount).toBe(1)
+  })
+
+  it('v1 importは原文を端末のlegacy backupへ退避してからDriveへcommitする', async () => {
+    const transport = new FakeDriveTransport()
+    const setItem = vi.fn()
+    const repository = new GoogleDriveStorageRepository({
+      transport,
+      now: fixedNow,
+      legacyBackupStorage: { setItem },
+    })
+    const raw = JSON.stringify(createDemoCompanies().slice(0, 1))
+
+    await expect(repository.load()).resolves.toMatchObject({ status: 'empty' })
+    const preview = await repository.importBackup(raw)
+    expect(preview.sourceSchemaVersion).toBe(1)
+    expect(transport.files.size).toBe(0)
+
+    const committed = await repository.commitImport(preview)
+    expect(committed.status).toBe('saved')
+    expect(setItem).toHaveBeenCalledWith(expect.stringMatching(new RegExp(`^${V1_BACKUP_PREFIX}`)), raw)
+    expect(transport.files.size).toBe(1)
   })
 
   it('Drive versionが同じでもremote revisionが変われば退避JSON付きで停止する', async () => {

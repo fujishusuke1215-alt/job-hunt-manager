@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { CompanyView, ResearchFact, ScoringProfile, SelectionEvent } from '../domain/types'
 import { eventStatuses, eventTypes } from '../domain/types'
+import { isSafeHttpUrl } from '../domain/schemas'
 import { deadlineTone, formatDeadlineLabel } from '../utils/deadlines'
 import { createId } from '../utils/id'
 import { ResearchFactsPanel } from './ResearchFactsPanel'
@@ -23,6 +24,13 @@ const blankEvent = (): Omit<SelectionEvent, 'id'> => ({
   memo: '',
 })
 
+const toDatetimeLocalValue = (value: string) => {
+  const parsed = new Date(value)
+  if (!Number.isFinite(parsed.getTime())) return value.slice(0, 16)
+  const local = new Date(parsed.getTime() - parsed.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
 export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, onSaveFact }: CompanyDetailProps) {
   const { company } = view
   const [draft, setDraft] = useState(blankEvent)
@@ -35,9 +43,15 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
       setError('予定名と日時を入力してください。')
       return
     }
+    const scheduledAt = new Date(draft.scheduledAt)
+    if (!Number.isFinite(scheduledAt.getTime())) {
+      setError('日時を正しい形式で入力してください。')
+      return
+    }
+    const savedDraft = { ...draft, title: draft.title.trim(), scheduledAt: scheduledAt.toISOString() }
     const next = editingId
-      ? company.events.map((item) => item.id === editingId ? { ...draft, title: draft.title.trim(), id: editingId } : item)
-      : [...company.events, { ...draft, title: draft.title.trim(), id: createId('event') }]
+      ? company.events.map((item) => item.id === editingId ? { ...savedDraft, id: editingId } : item)
+      : [...company.events, { ...savedDraft, id: createId('event') }]
     onUpdateEvents(next)
     setDraft(blankEvent())
     setEditingId(null)
@@ -47,7 +61,7 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
   const startEdit = (event: SelectionEvent) => {
     const { id, ...values } = event
     setEditingId(id)
-    setDraft(values)
+    setDraft({ ...values, scheduledAt: toDatetimeLocalValue(values.scheduledAt) })
   }
 
   const deleteEvent = (id: string) => {
@@ -82,7 +96,7 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
                 <div><dt>MyPage</dt><dd>{company.myPageStatus}</dd></div>
                 <div><dt>Watch</dt><dd>{company.watchEnabled ? '有効' : '無効'}</dd></div>
               </dl>
-              {company.applicationUrl && <a className="external-link" href={company.applicationUrl} target="_blank" rel="noreferrer">応募ページを開く ↗</a>}
+              {company.applicationUrl && isSafeHttpUrl(company.applicationUrl) && <a className="external-link" href={company.applicationUrl} target="_blank" rel="noreferrer">応募ページを開く ↗</a>}
             </section>
 
             <section className="detail-section score-breakdown">

@@ -1,14 +1,15 @@
 import { useRef, useState } from 'react'
 import type { AppDataV2, AppMode, SyncStatus } from '../domain/types'
-import type { BackupImportPreview } from '../domain/backup'
-import { createAiAnalysisExport, createV2Backup, previewBackupImport } from '../domain/backup'
+import { createAiAnalysisExport, createV2Backup } from '../domain/backup'
+import type { ImportPreview } from '../repositories/types'
 
 interface DataToolsProps {
   mode: AppMode
   data: AppDataV2
   storageLabel: string
   syncStatus: SyncStatus
-  onImport: (data: AppDataV2) => void
+  onPreviewImport: (raw: string) => Promise<ImportPreview>
+  onCommitImport: (preview: ImportPreview) => Promise<void>
   onClear: () => void
   onResetDemo: () => void
 }
@@ -23,11 +24,21 @@ function downloadJson(contents: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function DataTools({ mode, data, storageLabel, syncStatus, onImport, onClear, onResetDemo }: DataToolsProps) {
+export function DataTools({
+  mode,
+  data,
+  storageLabel,
+  syncStatus,
+  onPreviewImport,
+  onCommitImport,
+  onClear,
+  onResetDemo,
+}: DataToolsProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
-  const [preview, setPreview] = useState<BackupImportPreview | null>(null)
+  const [preview, setPreview] = useState<ImportPreview | null>(null)
+  const [isCommitting, setIsCommitting] = useState(false)
   const [includeNotes, setIncludeNotes] = useState(false)
 
   const exportData = () => {
@@ -39,15 +50,15 @@ export function DataTools({ mode, data, storageLabel, syncStatus, onImport, onCl
   const exportForAi = () => {
     downloadJson(createAiAnalysisExport(data, includeNotes), `job-hunt-manager-ai-analysis-${new Date().toISOString().slice(0, 10)}.json`)
     setIsError(false)
-    setMessage(includeNotes ? '個人メモを含むAI分析用JSONを書き出しました。共有先を確認してください。' : '個人メモを除いたAI分析用JSONを書き出しました。')
+    setMessage(includeNotes ? '個人メモ・選考場所を含むAI分析用JSONを書き出しました。共有先を確認してください。' : '個人メモ・選考場所を除いたAI分析用JSONを書き出しました。')
   }
 
   const previewFile = async (file: File) => {
     try {
-      const next = previewBackupImport(await file.text())
+      const next = await onPreviewImport(await file.text())
       setPreview(next)
       setIsError(false)
-      setMessage(`${next.summary} まだ現在データは変更していません。`)
+      setMessage(`schemaVersion ${next.sourceSchemaVersion}の${next.summary.userCompanyCount}社を取り込む候補です。まだ現在データは変更していません。`)
     } catch (error) {
       setPreview(null)
       setIsError(true)
@@ -57,11 +68,23 @@ export function DataTools({ mode, data, storageLabel, syncStatus, onImport, onCl
     }
   }
 
-  const commitPreview = () => {
+  const commitPreview = async () => {
     if (!preview) return
-    onImport(preview.data)
-    setMessage(`${preview.companyCount}社を取り込みました。`)
-    setPreview(null)
+    setIsCommitting(true)
+    setIsError(false)
+    setMessage('')
+    try {
+      await onCommitImport(preview)
+      setMessage(mode === 'demo'
+        ? `${preview.summary.userCompanyCount}社を公開デモへ反映しました。外部保存はしていません。`
+        : `${preview.summary.userCompanyCount}社を取り込み、保存先への反映が完了しました。`)
+      setPreview(null)
+    } catch (error) {
+      setIsError(true)
+      setMessage(error instanceof Error ? error.message : 'バックアップを反映できませんでした。現在データは変更していません。')
+    } finally {
+      setIsCommitting(false)
+    }
   }
 
   const clearData = () => {
@@ -84,15 +107,15 @@ export function DataTools({ mode, data, storageLabel, syncStatus, onImport, onCl
       {message && <div className={isError ? 'notice error' : 'notice success'} role="status">{message}</div>}
       {preview && (
         <article className="panel import-preview">
-          <div><p className="eyebrow">IMPORT PREVIEW</p><h2>取り込み前の確認</h2><p>{preview.summary}</p><p>現在: {data.userCompanies.length}社 → 取込後: {preview.companyCount}社 / 元schema: v{preview.sourceVersion}</p></div>
-          <div className="inline-actions"><button className="secondary-button" type="button" onClick={() => { setPreview(null); setMessage('取り込みをキャンセルしました。') }}>キャンセル</button><button className="primary-button" type="button" onClick={commitPreview}>この内容を反映</button></div>
+          <div><p className="eyebrow">IMPORT PREVIEW</p><h2>取り込み前の確認</h2><p>schemaVersion {preview.sourceSchemaVersion}のバックアップです。</p><p>現在: {data.userCompanies.length}社 → 取込後: {preview.summary.userCompanyCount}社 / Fact: {preview.summary.researchFactCount}件 / Watch: {preview.summary.watchFindingCount}件</p>{preview.legacyBackup && <p>v1原文は反映時にこのブラウザーのlocalStorageへlegacy backupとして退避し、保存先には変換済みv2を保存します。</p>}{preview.warnings.map((warning) => <p key={warning}>{warning}</p>)}</div>
+          <div className="inline-actions"><button className="secondary-button" type="button" disabled={isCommitting} onClick={() => { setPreview(null); setMessage('取り込みをキャンセルしました。') }}>キャンセル</button><button className="primary-button" type="button" disabled={isCommitting} onClick={() => void commitPreview()}>{isCommitting ? '反映中…' : 'この内容を反映'}</button></div>
         </article>
       )}
 
       <div className="data-card-grid">
         <article className="data-card"><span className="data-card-number">01</span><h2>v2バックアップ</h2><p>{data.userCompanies.length}社、評価設定、Fact、WatchをschemaVersion 2で書き出します。</p><button className="secondary-button" type="button" onClick={exportData}>JSONを書き出す</button></article>
-        <article className="data-card"><span className="data-card-number">02</span><h2>安全に読み込む</h2><p>v1とv2に対応。まずruntime validationし、プレビュー後にだけ反映します。</p><input ref={fileRef} className="sr-only" id="backup-file" type="file" accept="application/json,.json" onChange={(event) => event.target.files?.[0] && void previewFile(event.target.files[0])} /><label className="secondary-button label-button" htmlFor="backup-file">JSONを選ぶ</label></article>
-        <article className="data-card"><span className="data-card-number">03</span><h2>AI分析用</h2><p>ChatGPT等へ渡す構造化JSONです。既定では個人メモと面接場所を除きます。</p><label className="toggle-field"><input type="checkbox" checked={includeNotes} onChange={(event) => setIncludeNotes(event.target.checked)} /><span>個人メモも含める</span></label><button className="secondary-button" type="button" onClick={exportForAi}>AI分析用を書き出す</button></article>
+        <article className="data-card"><span className="data-card-number">02</span><h2>安全に読み込む</h2><p>v1とv2に対応。まずruntime validationし、プレビュー後にだけ反映します。</p><input ref={fileRef} className="sr-only" id="backup-file" type="file" accept="application/json,.json" disabled={isCommitting} onChange={(event) => event.target.files?.[0] && void previewFile(event.target.files[0])} /><label className="secondary-button label-button" htmlFor="backup-file">JSONを選ぶ</label></article>
+        <article className="data-card"><span className="data-card-number">03</span><h2>AI分析用</h2><p>ChatGPT等へ渡す構造化JSONです。既定では企業メモ・イベントメモ・選考場所を除きます。</p><label className="toggle-field"><input type="checkbox" checked={includeNotes} onChange={(event) => setIncludeNotes(event.target.checked)} /><span>個人メモ・選考場所も含める</span></label><button className="secondary-button" type="button" onClick={exportForAi}>AI分析用を書き出す</button></article>
         <article className="data-card caution"><span className="data-card-number">04</span><h2>{mode === 'demo' ? 'デモを初期化' : '本人用データを削除'}</h2><p>{mode === 'demo' ? '編集した架空データを初期状態へ戻します。' : 'バックアップがなければ復元できません。'}</p><button className={mode === 'demo' ? 'secondary-button' : 'danger-button'} type="button" onClick={mode === 'demo' ? onResetDemo : clearData}>{mode === 'demo' ? 'デモを初期化' : 'すべて削除'}</button></article>
       </div>
 

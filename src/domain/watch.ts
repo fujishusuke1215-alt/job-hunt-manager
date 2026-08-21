@@ -261,7 +261,10 @@ export function buildTodayActions(
       ),
   )
   const findingActions = findings
-    .filter((finding) => finding.status === 'new' || finding.status === 'seen')
+    .filter((finding) =>
+      (finding.status === 'new' || finding.status === 'seen') &&
+      companyById.get(finding.userCompanyId)?.watchEnabled !== false,
+    )
     .map((finding) =>
       watchFindingToAction(
         finding,

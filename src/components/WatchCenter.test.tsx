@@ -6,7 +6,7 @@ import { WatchCenter } from './WatchCenter'
 
 const NOW = '2026-08-21T00:00:00.000Z'
 
-function userCompany(id: string, name: string): UserCompany {
+function userCompany(id: string, name: string, watchEnabled = true): UserCompany {
   return {
     id,
     masterCompanyId: null,
@@ -19,16 +19,16 @@ function userCompany(id: string, name: string): UserCompany {
     myPageStatus: '未開設',
     applicationUrl: '',
     memo: 'テスト専用の架空データ',
-    watchEnabled: true,
+    watchEnabled,
     events: [],
     createdAt: NOW,
     updatedAt: NOW,
   }
 }
 
-function companyView(id: string, name: string, score: number): CompanyView {
+function companyView(id: string, name: string, score: number, watchEnabled = true): CompanyView {
   return {
-    company: userCompany(id, name),
+    company: userCompany(id, name, watchEnabled),
     displayName: name,
     master: null,
     facts: [],
@@ -72,12 +72,15 @@ function finding(
 const companies = [
   companyView('uc_fictional_alpha', '架空アルファ株式会社', 80),
   companyView('uc_fictional_beta', '架空ベータ株式会社', 70),
+  companyView('uc_fictional_disabled', '架空Watch無効株式会社', 60, false),
 ]
 
 const findings = [
   finding('finding_new', 'uc_fictional_alpha', '架空募集開始', 'new', 'high'),
   finding('finding_seen', 'uc_fictional_beta', '架空締切変更', 'seen', 'medium'),
   finding('finding_completed', 'uc_fictional_alpha', '架空確認完了', 'completed', 'low'),
+  finding('finding_dismissed', 'uc_fictional_alpha', '架空非表示済み', 'dismissed', 'low'),
+  finding('finding_disabled', 'uc_fictional_disabled', '架空Watch無効通知', 'new', 'high'),
 ]
 
 const runs: WatchRun[] = [
@@ -117,6 +120,8 @@ describe('WatchCenter', () => {
     expect(screen.getByRole('note')).toHaveTextContent(
       'Gmailや採用Webの自動巡回、バックグラウンド定期実行はまだありません',
     )
+    expect(screen.queryByRole('heading', { name: '架空非表示済み' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '架空Watch無効通知' })).not.toBeInTheDocument()
 
     const newCard = screen.getByRole('heading', { name: '架空募集開始' }).closest('article')
     await user.click(within(newCard!).getByRole('button', { name: '完了' }))
@@ -151,5 +156,24 @@ describe('WatchCenter', () => {
     await user.selectOptions(screen.getByLabelText('企業'), 'uc_fictional_beta')
     expect(screen.getByRole('heading', { name: '架空締切変更' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '架空確認完了' })).not.toBeInTheDocument()
+  })
+
+  it('dismissedは通常一覧から隠し、状態で明示選択したときだけ表示する', async () => {
+    const user = userEvent.setup()
+    render(
+      <WatchCenter
+        companies={companies}
+        findings={findings}
+        runs={runs}
+        onStatusChange={vi.fn()}
+        onOpenCompany={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByRole('heading', { name: '架空非表示済み' })).not.toBeInTheDocument()
+    await user.selectOptions(screen.getByLabelText('状態'), 'dismissed')
+    expect(screen.getByRole('heading', { name: '架空非表示済み' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: '架空Watch無効通知' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: '架空Watch無効株式会社' })).not.toBeInTheDocument()
   })
 })

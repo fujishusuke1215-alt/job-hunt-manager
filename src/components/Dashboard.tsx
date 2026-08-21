@@ -1,6 +1,7 @@
 import { applicationStatuses } from '../domain/types'
 import type { CompanyView, WatchFinding } from '../domain/types'
 import { rankCompanyViews } from '../domain/selectors'
+import { buildTodayActions } from '../domain/watch'
 import { deadlineTone, formatDeadlineLabel, getDaysUntil } from '../utils/deadlines'
 
 interface DashboardProps {
@@ -11,62 +12,6 @@ interface DashboardProps {
   onOpenWatch: () => void
 }
 
-interface ActionItem {
-  id: string
-  userCompanyId: string
-  companyName: string
-  title: string
-  date: string | null
-  label: string
-  priority: number
-  score: number
-  kind: 'event' | 'watch'
-}
-
-function actionPriority(date: string | null, severity?: WatchFinding['severity']) {
-  const days = date ? getDaysUntil(date) : null
-  if (days !== null && days < 0) return 0
-  if (days !== null && days <= 1) return 1
-  if (days !== null && days <= 3) return 2
-  if (days !== null && days <= 7) return 3
-  if (severity === 'high') return 4
-  if (severity === 'medium') return 5
-  return 6
-}
-
-function buildActions(companies: CompanyView[], findings: WatchFinding[]): ActionItem[] {
-  const byId = new Map(companies.map((view) => [view.company.id, view]))
-  const eventActions = companies.flatMap((view) => view.company.events
-    .filter((event) => !['完了', '見送り'].includes(event.status))
-    .map((event) => ({
-      id: `event-${event.id}`,
-      userCompanyId: view.company.id,
-      companyName: view.displayName,
-      title: event.title,
-      date: event.scheduledAt,
-      label: formatDeadlineLabel(event.scheduledAt),
-      priority: actionPriority(event.scheduledAt),
-      score: view.score.score ?? -1,
-      kind: 'event' as const,
-    })))
-  const watchActions = findings.filter((item) => ['new', 'seen'].includes(item.status)).map((item) => {
-    const view = byId.get(item.userCompanyId)
-    return {
-      id: `watch-${item.id}`,
-      userCompanyId: item.userCompanyId,
-      companyName: view?.displayName ?? '企業未特定',
-      title: item.title,
-      date: item.deadline,
-      label: item.deadline ? formatDeadlineLabel(item.deadline) : `Watch ${item.severity}`,
-      priority: actionPriority(item.deadline, item.severity),
-      score: view?.score.score ?? -1,
-      kind: 'watch' as const,
-    }
-  })
-  return [...eventActions, ...watchActions]
-    .sort((a, b) => a.priority - b.priority || b.score - a.score || a.companyName.localeCompare(b.companyName, 'ja') || a.id.localeCompare(b.id))
-}
-
 export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, onOpenWatch }: DashboardProps) {
   const activeCount = companies.filter((view) => !['検討中', '内定', '終了'].includes(view.company.applicationStatus)).length
   const waitingCount = companies.filter((view) => view.company.applicationStatus === '結果待ち').length
@@ -75,7 +20,12 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
     const days = getDaysUntil(event.scheduledAt)
     return days !== null && days <= 7
   }).length
-  const actions = buildActions(companies, findings)
+  const enabledCompanyIds = new Set(companies.filter((view) => view.company.watchEnabled).map((view) => view.company.id))
+  const enabledFindings = findings.filter((finding) => enabledCompanyIds.has(finding.userCompanyId))
+  const actions = buildTodayActions(companies.map((view) => view.company), enabledFindings, {
+    companyNames: Object.fromEntries(companies.map((view) => [view.company.id, view.displayName])),
+    companyScores: Object.fromEntries(companies.map((view) => [view.company.id, view.score.score])),
+  })
   const topCompanies = rankCompanyViews(companies).slice(0, 4)
 
   return (
@@ -88,7 +38,7 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
       <div className="metric-grid">
         <article className="metric-card featured"><span>登録企業</span><strong>{companies.length}</strong><small>比較対象を含む全企業</small></article>
         <article className="metric-card"><span>選考中</span><strong>{activeCount}</strong><small>現在対応が必要な企業</small></article>
-        <article className="metric-card"><span>新しいWatch</span><strong>{findings.filter((item) => item.status === 'new').length}</strong><small>承認後に保存された発見</small></article>
+        <article className="metric-card"><span>新しいWatch</span><strong>{enabledFindings.filter((item) => item.status === 'new').length}</strong><small>承認後に保存された発見</small></article>
         <article className="metric-card"><span>7日以内・超過</span><strong>{sevenDayCount}</strong><small>完了前の予定</small></article>
       </div>
 
@@ -101,10 +51,10 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
             <p className="panel-description">超過 → 24時間 → 3日 → 7日 → Watch重要度。同条件だけ適合度を使います。</p>
             <div className="deadline-list">
               {actions.length === 0 ? <p className="muted-message">未完了の予定・Watchはありません。</p> : actions.slice(0, 8).map((item) => (
-                <button className="deadline-row" type="button" key={item.id} onClick={() => item.kind === 'watch' ? onOpenWatch() : onOpenCompany(item.userCompanyId)}>
-                  <span className={`deadline-date ${item.date ? deadlineTone(item.date) : ''}`}><strong>{item.kind === 'watch' ? 'W' : new Date(item.date ?? '').getDate()}</strong><small>{item.kind === 'watch' ? 'WATCH' : new Date(item.date ?? '').toLocaleDateString('ja-JP', { month: 'short' })}</small></span>
+                <button className="deadline-row" type="button" key={item.id} onClick={() => item.source === 'watch_finding' ? onOpenWatch() : onOpenCompany(item.userCompanyId)}>
+                  <span className={`deadline-date ${item.deadline ? deadlineTone(item.deadline) : ''}`}><strong>{item.source === 'watch_finding' ? 'W' : new Date(item.deadline ?? '').getDate()}</strong><small>{item.source === 'watch_finding' ? 'WATCH' : new Date(item.deadline ?? '').toLocaleDateString('ja-JP', { month: 'short' })}</small></span>
                   <span className="deadline-copy"><strong>{item.companyName}</strong><small>{item.title}</small></span>
-                  <span className={`deadline-badge ${item.date ? deadlineTone(item.date) : ''}`}>{item.label}</span>
+                  <span className={`deadline-badge ${item.deadline ? deadlineTone(item.deadline) : ''}`}>{item.deadline ? formatDeadlineLabel(item.deadline) : `Watch ${item.severity}`}</span>
                 </button>
               ))}
             </div>

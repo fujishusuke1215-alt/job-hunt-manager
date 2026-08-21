@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import type { AppDataV2, CatalogData } from '../domain/types'
 import type { AiSyncPreview } from '../domain/aiSync'
-import { commitAiSyncPreview, previewAiSync } from '../domain/aiSync'
+import { commitAiSyncPreview } from '../domain/aiSync'
+import { ManualAiImportWatchProvider } from '../providers/watch'
 
 interface AiSyncProps {
   data: AppDataV2
@@ -17,15 +18,16 @@ function valueText(value: unknown) {
 
 export function AiSync({ data, catalog, onChange }: AiSyncProps) {
   const fileRef = useRef<HTMLInputElement>(null)
+  const providerRef = useRef(new ManualAiImportWatchProvider())
   const [json, setJson] = useState('')
   const [preview, setPreview] = useState<AiSyncPreview | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
 
-  const buildPreview = (input = json) => {
+  const buildPreview = async (input = json) => {
     try {
-      const next = previewAiSync(input, data, catalog)
+      const next = await providerRef.current.preview(input, { data, catalog })
       setPreview(next)
       setSelected(new Set(next.items.filter((item) => item.canApply && !item.requiresDeleteConfirmation).map((item) => item.operation.operationId)))
       setIsError(false)
@@ -41,7 +43,7 @@ export function AiSync({ data, catalog, onChange }: AiSyncProps) {
   const readFile = async (file: File) => {
     const text = await file.text()
     setJson(text)
-    buildPreview(text)
+    await buildPreview(text)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -84,7 +86,7 @@ export function AiSync({ data, catalog, onChange }: AiSyncProps) {
         <div className="settings-body">
           <label className="field"><span>JSONを貼り付け</span><textarea rows={12} value={json} onChange={(event) => setJson(event.target.value)} placeholder="AI_SYNC_FORMAT.mdのAiSyncEnvelopeV1を貼り付け" /></label>
           <input ref={fileRef} className="sr-only" id="ai-sync-file" type="file" accept="application/json,.json" onChange={(event) => event.target.files?.[0] && void readFile(event.target.files[0])} />
-          <div className="inline-actions start"><label className="secondary-button label-button" htmlFor="ai-sync-file">JSONファイルを選ぶ</label><button className="primary-button" type="button" onClick={() => buildPreview()}>検証して差分を見る</button></div>
+          <div className="inline-actions start"><label className="secondary-button label-button" htmlFor="ai-sync-file">JSONファイルを選ぶ</label><button className="primary-button" type="button" onClick={() => void buildPreview()}>検証して差分を見る</button></div>
         </div>
       </article>
 

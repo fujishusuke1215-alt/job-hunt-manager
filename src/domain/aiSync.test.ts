@@ -179,6 +179,13 @@ describe('AI Sync validation and transaction flow', () => {
     expect(committed.userCompanies[0].events).toHaveLength(1)
     expect(committed.watchFindings).toHaveLength(1)
     expect(committed.watchFindings[0].fingerprint).toBe('fictional-deadline-2026-08-24')
+    expect(committed.watchRuns).toHaveLength(1)
+    expect(committed.watchRuns[0]).toMatchObject({
+      provider: 'manual-ai-test',
+      findingCount: 1,
+      status: 'completed',
+    })
+    expect(committed.watchFindings[0].watchRunId).toBe(committed.watchRuns[0].id)
 
     const duplicatePreview = previewAiSync(input, committed, catalog)
     expect(duplicatePreview.items.every((item) => item.status === 'duplicate')).toBe(true)
@@ -191,6 +198,46 @@ describe('AI Sync validation and transaction flow', () => {
     expect(duplicateCommit.data).toBe(committed)
     expect(duplicateCommit.data.userCompanies[0].events).toHaveLength(1)
     expect(duplicateCommit.data.watchFindings).toHaveLength(1)
+  })
+
+  it('deduplicates different Watch operationIds with the same fingerprint within one run', () => {
+    const original = stateWithCompany()
+    const watchOperation = (operationId: string, summary: string) => ({
+      operationId,
+      entityType: 'watchFinding',
+      action: 'upsert',
+      companyRef: { masterCompanyId: 'cmp_fictional_tech' },
+      payload: {
+        type: 'recruitment_info_changed',
+        severity: 'medium',
+        title: '架空募集要項の更新',
+        summary,
+        detectedAt: NOW,
+        deadline: null,
+        status: 'new',
+        fingerprint: 'fictional-shared-fingerprint',
+      },
+      evidence: [],
+    })
+    const input = envelope([
+      watchOperation('op_watch_same_fp_1', '架空の初回情報です。'),
+      watchOperation('op_watch_same_fp_2', '架空の更新情報です。'),
+    ])
+    const preview = previewAiSync(input, original, catalog)
+    const committed = commitAiSyncPreview(
+      original,
+      preview,
+      ['op_watch_same_fp_1', 'op_watch_same_fp_2'],
+      { now: NOW },
+    ).data
+
+    expect(committed.watchFindings).toHaveLength(1)
+    expect(committed.watchFindings[0].summary).toBe('架空の更新情報です。')
+    expect(committed.watchRuns).toHaveLength(1)
+    expect(committed.watchRuns[0].findingCount).toBe(1)
+    expect(committed.processedOperationIds).toEqual(
+      expect.arrayContaining(['op_watch_same_fp_1', 'op_watch_same_fp_2']),
+    )
   })
 
   it('marks multiple normalized company candidates as blocked', () => {
@@ -267,5 +314,181 @@ describe('AI Sync validation and transaction flow', () => {
     const result = commitAiSyncPreview(original, preview, ['op_same'], { now: NOW })
     expect(result.data.researchFacts).toHaveLength(1)
     expect(result.data.processedOperationIds.filter((id) => id === 'op_same')).toHaveLength(1)
+  })
+
+  it('uses operation-order virtual state for a new company and its dependent entities', () => {
+    const original = createEmptyAppData(NOW)
+    const input = envelope([
+      {
+        operationId: 'op_create_custom_company',
+        entityType: 'userCompany',
+        action: 'upsert',
+        companyRef: { companyName: '株式会社架空新規ラボ' },
+        payload: {
+          id: 'uc_new_fictional',
+          userEnteredName: '株式会社架空新規ラボ',
+          role: '架空研究職',
+        },
+        evidence: [],
+      },
+      {
+        ...factOperation('op_new_company_fact', 'web_test'),
+        companyRef: { companyName: '架空新規ラボ' },
+      },
+      {
+        operationId: 'op_new_company_event',
+        entityType: 'selectionEvent',
+        action: 'upsert',
+        companyRef: { companyName: '架空新規ラボ' },
+        payload: {
+          type: '面接',
+          title: '架空一次面接',
+          scheduledAt: '2026-08-23T03:00:00.000Z',
+          status: '予定',
+          location: '架空オンライン会場',
+          memo: '',
+        },
+        evidence: [],
+      },
+      {
+        operationId: 'op_new_company_watch',
+        entityType: 'watchFinding',
+        action: 'upsert',
+        companyRef: { companyName: '架空新規ラボ' },
+        payload: {
+          type: 'recruitment_started',
+          severity: 'medium',
+          title: '架空採用開始',
+          summary: '完全な架空情報です。',
+          detectedAt: NOW,
+          deadline: null,
+          status: 'new',
+          fingerprint: 'fictional-new-company-watch',
+        },
+        evidence: [],
+      },
+    ])
+
+    const preview = previewAiSync(input, original, catalog)
+    expect(preview.items.map((item) => item.status)).toEqual(['ready', 'ready', 'ready', 'ready'])
+    expect(original.userCompanies).toHaveLength(0)
+
+    const committed = commitAiSyncPreview(
+      original,
+      preview,
+      preview.items.map((item) => item.operation.operationId),
+      { now: '2026-08-21T01:00:00.000Z' },
+    ).data
+
+    expect(committed.userCompanies).toHaveLength(1)
+    expect(committed.userCompanies[0].id).toBe('uc_new_fictional')
+    expect(committed.researchFacts[0].userCompanyId).toBe('uc_new_fictional')
+    expect(committed.userCompanies[0].events).toHaveLength(1)
+    expect(committed.watchFindings[0].userCompanyId).toBe('uc_new_fictional')
+    expect(committed.watchFindings[0].watchRunId).toBe(committed.watchRuns[0].id)
+  })
+
+  it('blocks an orphan-producing upsert after an earlier company delete', () => {
+    const original = stateWithCompany()
+    const deleteCompany = {
+      operationId: 'op_delete_company_first',
+      entityType: 'userCompany',
+      action: 'delete',
+      companyRef: { masterCompanyId: 'cmp_fictional_tech' },
+      payload: { id: 'uc_1' },
+      evidence: [],
+    }
+    const input = envelope([deleteCompany, factOperation('op_fact_after_company_delete')])
+    const preview = previewAiSync(input, original, catalog)
+
+    expect(preview.items.map((item) => item.status)).toEqual(['ready', 'blocked'])
+    const committed = commitAiSyncPreview(
+      original,
+      preview,
+      ['op_delete_company_first', 'op_fact_after_company_delete'],
+      { now: NOW, confirmedDeleteOperationIds: ['op_delete_company_first'] },
+    ).data
+    expect(committed.userCompanies).toHaveLength(0)
+    expect(committed.researchFacts).toHaveLength(0)
+  })
+
+  it('rejects a selected dependent operation when its preceding company creation is not selected', () => {
+    const original = createEmptyAppData(NOW)
+    const snapshot = structuredClone(original)
+    const input = envelope([
+      {
+        operationId: 'op_dependency_company',
+        entityType: 'userCompany',
+        action: 'upsert',
+        companyRef: { companyName: '株式会社架空依存テック' },
+        payload: { id: 'uc_dependency', userEnteredName: '株式会社架空依存テック' },
+        evidence: [],
+      },
+      {
+        ...factOperation('op_dependency_fact'),
+        companyRef: { companyName: '架空依存テック' },
+      },
+    ])
+    const preview = previewAiSync(input, original, catalog)
+
+    expect(preview.items.map((item) => item.status)).toEqual(['ready', 'ready'])
+    expect(() => commitAiSyncPreview(original, preview, ['op_dependency_fact'], { now: NOW }))
+      .toThrow('元データを変更していません')
+    expect(original).toEqual(snapshot)
+  })
+
+  it('rescales existing evaluations when an AI profile upsert changes scaleMax with the same criterion ID', () => {
+    const original = stateWithCompany()
+    const profile = original.scoringProfiles.find((item) => item.id === original.activeScoringProfileId)!
+    const criterion = profile.criteria[0]
+    original.evaluations = [{
+      id: 'evaluation_fictional',
+      userCompanyId: 'uc_1',
+      scoringProfileId: profile.id,
+      values: { [criterion.id]: 4 },
+      createdAt: NOW,
+      updatedAt: NOW,
+    }]
+    const operation = {
+      operationId: 'op_profile_scale_change',
+      entityType: 'scoringProfile',
+      action: 'upsert',
+      payload: {
+        id: profile.id,
+        name: profile.name,
+        kind: profile.kind,
+        criteria: profile.criteria.map((item) =>
+          item.id === criterion.id ? { ...item, scaleMax: 10 } : item,
+        ),
+      },
+      evidence: [],
+    }
+
+    const preview = previewAiSync(envelope([operation]), original, catalog)
+    expect(preview.items[0].status).toBe('ready')
+    const committed = commitAiSyncPreview(original, preview, ['op_profile_scale_change'], { now: NOW }).data
+    expect(original.evaluations[0].values[criterion.id]).toBe(4)
+    expect(committed.evaluations[0].values[criterion.id]).toBe(8)
+  })
+
+  it('blocks AI profile updates that discard an existing criterion ID', () => {
+    const original = stateWithCompany()
+    const profile = original.scoringProfiles.find((item) => item.id === original.activeScoringProfileId)!
+    const operation = {
+      operationId: 'op_profile_remove_criterion',
+      entityType: 'scoringProfile',
+      action: 'upsert',
+      payload: {
+        id: profile.id,
+        name: profile.name,
+        kind: profile.kind,
+        criteria: profile.criteria.slice(1),
+      },
+      evidence: [],
+    }
+
+    const preview = previewAiSync(envelope([operation]), original, catalog)
+    expect(preview.items[0]).toMatchObject({ status: 'blocked', canApply: false })
+    expect(preview.items[0].message).toContain('評価項目ID')
   })
 })

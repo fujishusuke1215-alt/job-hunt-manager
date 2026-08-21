@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { isSafeHttpUrl } from './schemas'
+import { isSafeHttpUrl, parseAppDataV2 } from './schemas'
 import {
   applicationStatuses,
   eventStatuses,
@@ -135,7 +135,19 @@ const scoringProfilePayloadSchema = z
           order: z.number().int(),
         })
         .strict(),
-    ),
+    ).superRefine((criteria, context) => {
+      const seen = new Set<string>()
+      criteria.forEach((criterion, index) => {
+        if (seen.has(criterion.id)) {
+          context.addIssue({
+            code: 'custom',
+            path: [index, 'id'],
+            message: '同じ評価項目IDを1つのプロファイル内で重複させることはできません。',
+          })
+        }
+        seen.add(criterion.id)
+      })
+    }),
   })
   .strict()
 
@@ -787,6 +799,31 @@ function previewEntity(
       changes: changesOf([{ field: 'entity', label: '評価プロファイル', before: target, after: null }]),
     }
   }
+  const incomingCriterionIds = new Set(operation.payload.criteria.map((criterion) => criterion.id))
+  const criterionOwnedByAnotherProfile = operation.payload.criteria.find((criterion) =>
+    data.scoringProfiles.some((profile) =>
+      profile.id !== target?.id && profile.criteria.some((current) => current.id === criterion.id),
+    ),
+  )
+  if (criterionOwnedByAnotherProfile) {
+    return {
+      targetEntityId: target?.id ?? null,
+      targetLabel: operation.payload.name,
+      changes: [],
+      error: `評価項目ID「${criterionOwnedByAnotherProfile.id}」は別のプロファイルで使用中です。`,
+    }
+  }
+  if (target) {
+    const removedCriterion = target.criteria.find((criterion) => !incomingCriterionIds.has(criterion.id))
+    if (removedCriterion) {
+      return {
+        targetEntityId: target.id,
+        targetLabel: target.name,
+        changes: [],
+        error: `既存の評価項目ID「${removedCriterion.id}」が失われる変更は自動反映できません。無効化を使用してください。`,
+      }
+    }
+  }
   return {
     targetEntityId: target?.id ?? null,
     targetLabel: operation.payload.name,
@@ -804,20 +841,23 @@ export function previewAiSync(
 ): AiSyncPreview {
   const envelope = parseAiSyncEnvelope(input)
   const seenOperationIds = new Set(data.processedOperationIds)
+  // Envelope内の前段操作を仮想状態へ順番に反映する。これにより、新規企業を
+  // 作成した直後のFact/Event/Findingは同じpreviewで安全に照合できる。
+  const virtualData = copyData(data)
   const items: AiSyncPreviewItem[] = envelope.operations.map((operation) => {
     const duplicate = seenOperationIds.has(operation.operationId)
     seenOperationIds.add(operation.operationId)
     const companyMatch =
       operation.entityType === 'scoringProfile'
         ? noCompanyMatch
-        : resolveCompanyMatch(operation.companyRef, data, catalog, operation.entityType === 'userCompany' && operation.action === 'upsert')
+        : resolveCompanyMatch(operation.companyRef, virtualData, catalog, operation.entityType === 'userCompany' && operation.action === 'upsert')
     const matchBlocked = companyMatch.status === 'ambiguous' || companyMatch.status === 'not_found'
     const entityPreview = matchBlocked
       ? { targetEntityId: null, targetLabel: operation.entityType, changes: [] }
-      : previewEntity(operation, data, companyMatch)
+      : previewEntity(operation, virtualData, companyMatch)
     const blockedMessage = matchBlocked ? companyMatch.message : entityPreview.error
     const status: AiSyncPreviewStatus = duplicate ? 'duplicate' : blockedMessage ? 'blocked' : 'ready'
-    return {
+    const item: AiSyncPreviewItem = {
       operation,
       status,
       canApply: status === 'ready',
@@ -831,6 +871,11 @@ export function previewAiSync(
           ? 'このoperationIdは処理済み、または同じEnvelope内で重複しています。'
           : blockedMessage ?? (operation.action === 'delete' ? '削除には追加確認が必要です。' : '反映候補です。'),
     }
+    if (status === 'ready') {
+      // preview用のcloneだけを変更するため、呼出元stateは不変のまま。
+      applyItem(virtualData, item, envelope.generatedAt)
+    }
+    return item
   })
 
   return {
@@ -965,7 +1010,12 @@ function applySelectionEvent(next: AppDataV2, item: AiSyncPreviewItem, now: stri
   next.userCompanies[companyIndex] = { ...company, events, updatedAt: now }
 }
 
-function applyWatchFinding(next: AppDataV2, item: AiSyncPreviewItem, now: string): void {
+function applyWatchFinding(
+  next: AppDataV2,
+  item: AiSyncPreviewItem,
+  now: string,
+  watchRunId: string | null = null,
+): void {
   const operation = item.operation
   if (operation.entityType !== 'watchFinding') return
   if (operation.action === 'delete') {
@@ -979,7 +1029,7 @@ function applyWatchFinding(next: AppDataV2, item: AiSyncPreviewItem, now: string
     id: operation.payload.id ?? stableEntityId('finding_ai', operation.operationId),
     userCompanyId,
     masterCompanyId: company?.masterCompanyId ?? item.companyMatch.matchedMasterCompanyId,
-    watchRunId: operation.payload.watchRunId,
+    watchRunId: watchRunId ?? operation.payload.watchRunId,
     type: operation.payload.type,
     severity: operation.payload.severity,
     title: operation.payload.title,
@@ -1046,6 +1096,28 @@ function applyScoringProfile(next: AppDataV2, item: AiSyncPreviewItem, now: stri
   const id = operation.payload.id ?? stableEntityId('profile_ai', operation.operationId)
   const index = next.scoringProfiles.findIndex((profile) => profile.id === id)
   const current = index >= 0 ? next.scoringProfiles[index] : null
+  if (current) {
+    const previousById = new Map(current.criteria.map((criterion) => [criterion.id, criterion]))
+    const scaleChanges = operation.payload.criteria
+      .map((criterion) => ({ criterion, previous: previousById.get(criterion.id) }))
+      .filter(({ criterion, previous }) => previous && previous.scaleMax !== criterion.scaleMax)
+    if (scaleChanges.length > 0) {
+      next.evaluations = next.evaluations.map((evaluation) => {
+        if (evaluation.scoringProfileId !== id) return evaluation
+        let changed = false
+        const values = { ...evaluation.values }
+        for (const { criterion, previous } of scaleChanges) {
+          const value = values[criterion.id]
+          if (value === null || value === undefined || !previous) continue
+          values[criterion.id] = Math.round(
+            Math.min(criterion.scaleMax, Math.max(0, (value / previous.scaleMax) * criterion.scaleMax)) * 10,
+          ) / 10
+          changed = true
+        }
+        return changed ? { ...evaluation, values, updatedAt: now } : evaluation
+      })
+    }
+  }
   const profile: ScoringProfile = {
     id,
     name: operation.payload.name,
@@ -1058,12 +1130,41 @@ function applyScoringProfile(next: AppDataV2, item: AiSyncPreviewItem, now: stri
   else next.scoringProfiles.push(profile)
 }
 
-function applyItem(next: AppDataV2, item: AiSyncPreviewItem, now: string): void {
+function applyItem(
+  next: AppDataV2,
+  item: AiSyncPreviewItem,
+  now: string,
+  options: { watchRunId?: string | null } = {},
+): void {
   if (item.operation.entityType === 'researchFact') applyResearchFact(next, item, now)
   else if (item.operation.entityType === 'selectionEvent') applySelectionEvent(next, item, now)
-  else if (item.operation.entityType === 'watchFinding') applyWatchFinding(next, item, now)
+  else if (item.operation.entityType === 'watchFinding') applyWatchFinding(next, item, now, options.watchRunId ?? null)
   else if (item.operation.entityType === 'userCompany') applyUserCompany(next, item, now)
   else applyScoringProfile(next, item, now)
+}
+
+function assertAiSyncCommitReferences(data: AppDataV2): void {
+  const companyIds = new Set(data.userCompanies.map((company) => company.id))
+  const profileIds = new Set(data.scoringProfiles.map((profile) => profile.id))
+  const watchRunIds = new Set(data.watchRuns.map((run) => run.id))
+
+  const orphanFact = data.researchFacts.find(
+    (fact) => fact.userCompanyId !== null && !companyIds.has(fact.userCompanyId),
+  )
+  const orphanEvaluation = data.evaluations.find(
+    (evaluation) =>
+      !companyIds.has(evaluation.userCompanyId) || !profileIds.has(evaluation.scoringProfileId),
+  )
+  const orphanFinding = data.watchFindings.find(
+    (finding) =>
+      !companyIds.has(finding.userCompanyId) ||
+      (finding.watchRunId !== null && !watchRunIds.has(finding.watchRunId)),
+  )
+  if (orphanFact || orphanEvaluation || orphanFinding) {
+    throw new AiSyncValidationError(
+      'AI Sync反映結果の参照整合性を検証できなかったため、元データを変更していません。',
+    )
+  }
 }
 
 export function commitAiSyncPreview(
@@ -1082,6 +1183,18 @@ export function commitAiSyncPreview(
   const next = copyData(data)
   const appliedOperationIds: string[] = []
   const deleteConfirmationRequiredIds: string[] = []
+  const watchCandidates = preview.items.filter((item) =>
+    selected.has(item.operation.operationId) &&
+    item.status === 'ready' &&
+    item.operation.entityType === 'watchFinding' &&
+    (!item.requiresDeleteConfirmation || confirmedDeletes.has(item.operation.operationId)),
+  )
+  const watchRunId = watchCandidates.length > 0
+    ? stableEntityId(
+        'watch_run_ai',
+        `${next.revision + 1}_${watchCandidates[0].operation.operationId}`,
+      )
+    : null
 
   for (const item of preview.items) {
     const operationId = item.operation.operationId
@@ -1090,7 +1203,7 @@ export function commitAiSyncPreview(
       deleteConfirmationRequiredIds.push(operationId)
       continue
     }
-    applyItem(next, item, now)
+    applyItem(next, item, now, { watchRunId })
     appliedOperationIds.push(operationId)
   }
 
@@ -1110,6 +1223,18 @@ export function commitAiSyncPreview(
       .map((item) => item.operation.operationId)
       .filter((operationId) => !appliedSet.has(operationId)),
   )
+  const appliedWatchItems = watchCandidates.filter((item) => appliedSet.has(item.operation.operationId))
+  if (watchRunId && appliedWatchItems.length > 0) {
+    next.watchRuns.push({
+      id: watchRunId,
+      provider: preview.envelope.provider,
+      startedAt: preview.envelope.generatedAt,
+      completedAt: now,
+      findingCount: next.watchFindings.filter((finding) => finding.watchRunId === watchRunId).length,
+      status: 'completed',
+      note: 'AI Syncで承認した手動取込',
+    })
+  }
   next.processedOperationIds = unique([...next.processedOperationIds, ...applied])
   next.aiImportHistory.push({
     id: stableEntityId(`ai_import_${next.revision + 1}`, `${preview.envelope.provider}_${now}`),
@@ -1121,9 +1246,20 @@ export function commitAiSyncPreview(
   })
   next.revision += 1
   next.updatedAt = now
+  let validated: AppDataV2
+  try {
+    validated = parseAppDataV2(next)
+    assertAiSyncCommitReferences(validated)
+  } catch (error) {
+    if (error instanceof AiSyncValidationError) throw error
+    throw new AiSyncValidationError(
+      'AI Sync反映結果のruntime validationに失敗したため、元データを変更していません。',
+      [error instanceof Error ? error.message : '検証エラー'],
+    )
+  }
 
   return {
-    data: next,
+    data: validated,
     appliedOperationIds: applied,
     skippedOperationIds,
     deleteConfirmationRequiredIds: unique(deleteConfirmationRequiredIds),

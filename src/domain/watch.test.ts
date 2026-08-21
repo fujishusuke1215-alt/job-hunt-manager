@@ -196,4 +196,37 @@ describe('transparent today-action ordering', () => {
     ])
     expect(actions.every((action) => action.companyScore === 80)).toBe(true)
   })
+
+  it('excludes selection events beyond seven days from the default Today list', () => {
+    const farCompany: UserCompany = {
+      ...company(),
+      events: [{
+        id: 'event_far_future',
+        type: '面接',
+        title: '架空の8日後面接',
+        scheduledAt: '2026-08-29T00:00:01.000Z',
+        status: '予定',
+        location: '',
+        memo: '',
+      }],
+    }
+
+    expect(buildTodayActions([farCompany], [], { now: NOW })).toEqual([])
+    expect(buildTodayActions(
+      [farCompany],
+      [],
+      { now: NOW, includeLaterOrLowPriority: true },
+    )).toHaveLength(1)
+  })
+
+  it('keeps selection deadlines but excludes Watch Findings for a company with Watch disabled', () => {
+    const disabledCompany = { ...company(), watchEnabled: false }
+    const actions = buildTodayActions(
+      [disabledCompany],
+      [finding({ id: 'watch_disabled', deadline: null, severity: 'high' })],
+      { now: NOW },
+    )
+
+    expect(actions.map((action) => action.id)).toEqual(['selection:uc_1:event_due'])
+  })
 })
