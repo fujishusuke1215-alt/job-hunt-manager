@@ -1,4 +1,8 @@
-import type { Company, SelectionEvent } from '../types'
+import type { SelectionEvent } from '../domain/types'
+
+interface CompanyWithEvents {
+  events: SelectionEvent[]
+}
 
 const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate())
 
@@ -10,7 +14,7 @@ export function getDaysUntil(dateText: string, now = new Date()): number | null 
   return Math.ceil(diff / 86_400_000)
 }
 
-export function getNextEvent(company: Company, now = new Date()): SelectionEvent | undefined {
+export function getNextEvent(company: CompanyWithEvents, now = new Date()): SelectionEvent | undefined {
   return [...company.events]
     .filter((event) => event.status !== '完了' && event.status !== '見送り')
     .filter((event) => {
@@ -20,7 +24,7 @@ export function getNextEvent(company: Company, now = new Date()): SelectionEvent
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0]
 }
 
-export function getMostUrgentEvent(company: Company, now = new Date()): SelectionEvent | undefined {
+export function getMostUrgentEvent(company: CompanyWithEvents, now = new Date()): SelectionEvent | undefined {
   return [...company.events]
     .filter((event) => event.status !== '完了' && event.status !== '見送り')
     .filter((event) => getDaysUntil(event.scheduledAt, now) !== null)
@@ -42,4 +46,3 @@ export function deadlineTone(dateText: string, now = new Date()): 'overdue' | 's
   if (days !== null && days <= 7) return 'soon'
   return 'normal'
 }
-
