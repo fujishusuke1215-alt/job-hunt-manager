@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22.12.0'
+          node-version: '22.x'
 
       - name: Enable the locked pnpm version
         run: npm install --global pnpm@11.19.0
