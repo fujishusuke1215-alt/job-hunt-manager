@@ -9,11 +9,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --configLoader runner",
     "lint": "eslint .",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test": "vitest --configLoader runner run",
+    "test:watch": "vitest --configLoader runner",
+    "test:e2e": "playwright test && playwright test --config playwright.google.config.ts",
     "capture": "playwright test e2e/screenshots.spec.ts"
   },
   "dependencies": {
