@@ -53,7 +53,7 @@
 - 同じ丸め後scoreは同順位とし、coverage、表示名、IDで表示順を決定する。
 - runtime validationにZodを1依存だけ追加する。
 - Drive保存はsubmit等の明示変更単位でqueueし、キー入力ごとに送らない。
-- Google設定なしのdevではlocalStorageを明示表示し、production既定はdisabledにする。
+- devのlocalStorageは明示表示し、GitHub Pages productionはgoogle modeにする。Client ID未設定時は接続ボタンを無効化し、黙ってlocalStorageへfallbackしない。
 - Drive v3の原子的If-Match保証を前提にせず、version+AppData revisionの事前確認で停止する。
 
 ## 非機能・安全要件

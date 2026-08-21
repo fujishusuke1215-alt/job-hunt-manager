@@ -17,7 +17,7 @@
 
 ## React/Viteを維持した判断
 
-既存のDashboard、一覧、詳細、form、CSSが完成しており、今回の手動AI SyncとDrive RESTはSPAで実装できます。SEO向け公開企業ページも、browserを閉じた後の定期処理も今回の主目的ではありません。そのためframework移行より、Auth/Storage/Catalog/Watchと将来用AiProvider contractの境界へ時間を使いました。AiProviderの実装クラスや有料AI API呼出しは今回ありません。
+既存のDashboard、一覧、詳細、form、CSSが完成しており、今回の手動AI SyncとDrive RESTはSPAで実装できます。SEO向け公開企業ページも、browserを閉じた後の定期処理も今回の主目的ではありません。そのためframework移行より、Auth/Storage/Catalog/Watchの境界とAI JSON取込serviceへ時間を使いました。外部AiProvider interfaceや有料AI API呼出しは今回ありません。
 
 ## Zodを1つ追加した理由
 

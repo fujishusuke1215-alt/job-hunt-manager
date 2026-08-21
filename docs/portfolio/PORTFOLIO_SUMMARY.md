@@ -38,8 +38,8 @@
 ## 品質
 
 - TypeScript / ESLint / production build: 成功
-- unit/component: 119件成功（24ファイル）
-- Microsoft Edge E2E: 機能フロー6件＋証跡撮影2件、計8件成功
+- unit/component: 130件成功（25ファイル）
+- Microsoft Edge E2E: 従来8件＋Google/Driveモック1件、計9件成功
 - Google Auth/Drive Mock/contract: 28件成功
 - 実Googleアカウント接続: 未実施（確認済みと誇張しない）
 
@@ -51,4 +51,4 @@
 
 Gmail自動監視、採用Web定期巡回、browserを閉じた後のscheduler、一般企業検索、広告は未実装です。Google実接続と複数端末実機試験も本人操作後の確認項目です。
 
-公開URLは架空デモ専用で、本人用保存は無効です。GitHub Pagesへ送ったのはproduction build 4ファイルだけで、ソース・Git履歴・学習資料は非公開です。
+公開URLは架空デモとGoogle本人用の入口を分けています。Google本人用はRepository VariableへClient IDを設定後に有効になります。個人データ、token、Client Secret、`.env.local`はGitHubへ置かず、実Google同期だけは本人試験前です。

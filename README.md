@@ -4,7 +4,7 @@
 
 **公開デモ:** <https://fujishusuke1215-alt.github.io/job-hunt-manager/>
 
-公開URLは完全な架空データだけを使い、本人用保存を無効化したデモ専用buildです。インストールやログインなしで開けます。
+公開URLでは、ログイン不要の架空デモとGoogle本人用の入口を分けています。本人用はGoogle CloudのClient ID設定後に有効になり、各利用者自身のDrive `appDataFolder`へ保存します。
 
 ![v2ダッシュボード](docs/portfolio/screenshots/v2-dashboard.png)
 
@@ -65,7 +65,7 @@ Company Masterへの紐付け候補は表示しますが、表記ゆれだけで
 
 ## Google連携の現在地
 
-コードとMock/contractテストは実装済みです。要求scopeは `openid email profile` と `https://www.googleapis.com/auth/drive.appdata` だけで、Gmail scopeはありません。access tokenはメモリだけで扱います。
+GitHub Pages向けの接続画面、GIS Token model、Drive Repository、401再接続、端末v1/v2移行、Drive/端末の選択UIまで実装済みです。要求scopeは `openid email profile` と `https://www.googleapis.com/auth/drive.appdata` だけで、Gmail scopeはありません。access tokenはメモリだけで扱います。
 
 実GoogleアカウントでのOAuth/Drive接続は未実施です。Client ID作成、本人ログイン、2FAは利用者本人だけが行います。Billing、カード、課金trialは使いません。設定する場合は [Google認証セットアップ](docs/GOOGLE_AUTH_SETUP.md) を読み、実施時点の公式料金と画面を再確認してください。
 
@@ -105,8 +105,8 @@ pnpm run test:e2e
 - TypeScript: 成功
 - ESLint: 成功
 - production build: 成功
-- unit/component: 119件成功（24ファイル）
-- Microsoft Edge E2E: 機能フロー6件＋証跡撮影2件、計8件成功
+- unit/component: 130件成功（25ファイル）
+- Microsoft Edge E2E: 従来8件＋Google/Driveモック1件、計9件成功
 - Google Auth/Drive: Mock/contractまで成功、実Googleアカウント未試験
 
 ## 安全性
@@ -125,13 +125,13 @@ pnpm run test:e2e
 - [要件](docs/01_REQUIREMENTS.md)
 - [構成](docs/02_ARCHITECTURE.md)
 - [v2データモデル](docs/07_DATA_MODEL_V2.md)
-- [開発証跡 Phase 0〜17](docs/evidence/INDEX.md)
+- [開発証跡 Phase 0〜19](docs/evidence/INDEX.md)
 - [ポートフォリオ要約](docs/portfolio/PORTFOLIO_SUMMARY.md)
 - [面接ガイド](docs/portfolio/INTERVIEW_GUIDE.md)
 - [AI利用記録](docs/06_AI_USAGE.md)
 
 ## 公開方針
 
-架空データのproduction build 4ファイルだけをGitHub Pagesへ公開しました。ソースコード、Git履歴、学習資料、本人用データ、Google設定は公開repositoryへ送っていません。
+Phase 18では架空デモのbuildだけを公開しました。Phase 19ではユーザーの明示指示に基づき、監査済みsource/docsを公開repositoryの`source` branchへ追加し、GitHub ActionsがClient IDをRepository Variableからbuildへ渡す構成へ発展させます。本人用データ、access token、Client Secret、`.env.local`は公開しません。
 
 GitHub Pagesは公開repositoryで無料利用し、カード、Billing、有料プラン、カスタムドメインは設定していません。OAuth本番設定と実Google接続は引き続き未実施です。

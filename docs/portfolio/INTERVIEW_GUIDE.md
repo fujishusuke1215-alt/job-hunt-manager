@@ -4,7 +4,7 @@
 
 ## 30秒説明
 
-「約50社の選考・締切・評価・採用情報変化が分散する課題から、React/TypeScriptで就活管理アプリを作りました。初版のlocalStorage単一Companyを実運用視点で見直し、Company Masterと本人情報の分離、自由な評価項目、根拠付きFact、AI差分承認、Google Drive保存境界へ発展させました。119件のunit/componentと8件のPlaywrightで確認し、架空demo buildだけを無料のGitHub Pagesへ公開しています。Google実接続だけは未試験と明記しています。」
+「約50社の選考・締切・評価・採用情報変化が分散する課題から、React/TypeScriptで就活管理アプリを作りました。初版のlocalStorage単一Companyを実運用視点で見直し、Company Masterと本人情報の分離、自由な評価項目、根拠付きFact、AI差分承認、Google Drive保存境界へ発展させました。130件のunit/componentと9件のPlaywrightで確認し、静的GitHub Pagesに架空demoとGoogle本人用の入口を公開しています。Google実接続だけは未試験と明記しています。」
 
 ## 1分説明
 
@@ -105,7 +105,7 @@ Drive v3の原子的If-Match保証を確認できておらず、事前確認とP
 
 ### 20. どんなtestをしましたか
 
-migration、scoring、matching、Fact、AI/Watch、Local/Drive、Authをunit/componentで119件、主要user flowをEdge機能E2Eで6件です。加えてPC・モバイルの証跡撮影2件を実行し、Playwright全体では8件です。
+migration、scoring、matching、Fact、AI/Watch、Local/Drive、Authをunit/componentで130件、従来user flowと撮影をEdge E2Eで8件です。さらにGoogle/Driveをmockした320px幅のaccount分離1件を実行し、Playwright全体では9件です。
 
 ### 21. 実際に起きたv2のerrorは
 

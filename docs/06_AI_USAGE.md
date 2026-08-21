@@ -18,7 +18,7 @@
 ## Codexが設計補完したもの
 
 - Zodをruntime validatorとして1依存追加。
-- production未設定時を`disabled`、dev localを画面に明示するruntime config。
+- production workflowを`google`、Client ID未設定時は接続ボタン無効、dev localを画面に明示するruntime config。
 - Driveの同名複数ファイルを競合として停止。
 - Drive versionとAppData revisionのopaque token契約。
 - 保存をform submit等の明示操作単位でqueue。
@@ -37,8 +37,8 @@
 ## 実際に検証できたもの
 
 - TypeScript、ESLint、production build。
-- unit/component 119件（24ファイル）。
-- Edge機能E2E 6件: demo、検索、詳細、選考、本人用CRUD/保存、dynamic scoring、AI Sync、Watch、v1 migration、v2 download。証跡撮影2件も合わせ、Playwrightは計8件成功。
+- unit/component 130件（25ファイル）。
+- Edgeの従来E2E 8件に、GIS/Driveをモックした320px幅のaccount A保存→logout→account B分離1件を追加し、計9件成功。
 - Mock Google Auth/Drive 28件: login states、scope allowlist、load/save、retry、permanent failure、conflict、v1原文退避。
 - 既存4commitとPhase 0〜10の保持、秘密情報pattern監査。
 - GitHub Pages実URL、HTTPS、公開デモ表示、本人用停止、公開payload 4ファイルを確認。
@@ -64,7 +64,7 @@
 
 ## 面接30秒説明
 
-「実際の就活管理課題と安全条件は自分で定義し、Codexを設計レビュー、実装、テスト作成に使いました。生成物をそのまま採用せず、要件対応表、Zod検証、119件のunit/component、6件のEdge機能E2Eと2件の撮影テスト、Git差分で確認しました。特にAI取込は即時更新させず、差分previewと人の承認を必須にしています。実Google接続など未確認部分も明記しています。」
+「実際の就活管理課題と安全条件は自分で定義し、Codexを設計レビュー、実装、テスト作成に使いました。生成物をそのまま採用せず、要件対応表、Zod検証、130件のunit/component、9件のEdge E2E、Git差分で確認しました。特にAI取込は即時更新させず、差分previewと人の承認を必須にしています。実Google接続など未確認部分も明記しています。」
 
 ## ユーザーが今後すること
 

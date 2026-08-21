@@ -16,12 +16,12 @@ flowchart TB
   STORE --> DRIVE[(Google Drive appDataFolder)]
   AUTH --> GIS[Google Identity Services]
   WATCH --> MANUAL[Manual AI JSON]
-  AIP[AiProvider contract] -. 将来の出力 .-> MANUAL
+  AIP[将来の外部AI provider] -. 将来の出力 .-> MANUAL
   WATCH -. 将来 .-> GMAIL[Gmail Provider]
   WATCH -. 将来 .-> WEB[Recruitment Web Provider]
 ```
 
-UIはDrive REST、OAuth、localStorageへ直接依存せず、interfaceを通します。将来バックエンドが必要になっても画面全体を書き直さないためです。`AiProvider`は`analyze`/`normalize`の将来用contractだけで、v2には外部AI実装も有料API呼出しもありません。
+UIはDrive REST、OAuth、localStorageへ直接依存せず、interfaceを通します。将来バックエンドが必要になっても画面全体を書き直さないためです。現在のAI連携はJSONのparse・validation・previewを行うdomain serviceであり、外部AI provider interfaceや有料API呼出しはまだ実装していません。
 
 ## データの関係
 

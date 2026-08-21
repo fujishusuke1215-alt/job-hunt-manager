@@ -23,5 +23,6 @@
 | 16 v2テスト | 回帰とAcceptance Criteriaを確認 | unit/component 119件、Edge機能E2E 6件、lint/type/build成功 | `src/**/*.test.*`, `e2e/core-flow.spec.ts` | selector重複をrole指定へ修正、Node PATH差は同梱Nodeで実行 |
 | 17 v2リリース監査 | テスト、docs、画像、security、Gitを整合 | Edge機能E2E 6件＋撮影2件、Phase 11〜17、portfolio、最終監査 | `README.md`, `docs/`, `e2e/screenshots.spec.ts` | 過去画像を保護し、新Phaseだけへ架空データを撮影 |
 | 18 公開デモ | URLだけで架空デモを共有 | GitHub PagesでHTTPS公開、本人用停止、build 4ファイルだけ配信 | `vite.config.ts`, Phase 18証跡 | 全source pushを安全審査で停止し、公開payloadを最小化 |
+| 19 Pages + Google本人用 | 静的URLから各自のDriveを使う | 公開入口、Actions Variable、401再接続、local v1/v2選択、account分離 | `App.tsx`, workflow, Google E2E, Phase 19証跡 | 実Google本人試験は残し、Mock/E2Eと公開コードを先に完成 |
 
 Phase 0〜10は初版として歴史を保持しています。Phase 11以降が、実際に使って見えた「複数端末、企業表記、固定ランキング、情報源、AI差分」の課題へ対応したv2です。

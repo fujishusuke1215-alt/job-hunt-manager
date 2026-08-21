@@ -6,8 +6,8 @@ Job Hunt Manager v2は、応募・検討企業を登録した後の「選考、�
 
 ## 5分で試す
 
-1. [公開デモ](https://fujishusuke1215-alt.github.io/job-hunt-manager/)を開く。またはPowerShellで `pnpm run dev` を実行し、表示URLを開く。
-2. 右上が「公開デモ」であることを確認する。
+1. [公開サイト](https://fujishusuke1215-alt.github.io/job-hunt-manager/)を開く。またはPowerShellで `pnpm run dev` を実行し、表示URLを開く。
+2. 公開サイトでは「デモを見る」を押す。Google Client ID設定後は「Googleアカウントで利用する」も選べる。
 3. 「企業・選考管理」で検索、企業カード、選考予定を試す。
 4. 「評価設定」でプロファイルを複製し、評価項目を変更する。
 5. 「AI同期」で `docs/09_AI_SYNC_FORMAT.md` の架空JSONをpreviewする。
@@ -22,9 +22,11 @@ Job Hunt Manager v2は、応募・検討企業を登録した後の「選考、�
 4. [08_GOOGLE_DRIVE_SYNC.md](08_GOOGLE_DRIVE_SYNC.md): 同期と競合停止
 5. [09_AI_SYNC_FORMAT.md](09_AI_SYNC_FORMAT.md): AI候補の安全な取込
 6. [10_WATCH_ARCHITECTURE.md](10_WATCH_ARCHITECTURE.md): 今回と将来のWatch境界
-7. [evidence/INDEX.md](evidence/INDEX.md): Phase 0〜17の実際の履歴
+7. [evidence/INDEX.md](evidence/INDEX.md): Phase 0〜19の実際の履歴
 8. [portfolio/INTERVIEW_GUIDE.md](portfolio/INTERVIEW_GUIDE.md): 面接練習
 9. [evidence/phase-18-public-deployment/README.md](evidence/phase-18-public-deployment/README.md): URL公開と最小payload
+10. [12_GITHUB_PAGES_GOOGLE_DRIVE.md](12_GITHUB_PAGES_GOOGLE_DRIVE.md): Pagesと個人Driveの分離
+11. [evidence/phase-19-github-pages-google-drive/README.md](evidence/phase-19-github-pages-google-drive/README.md): 公開版Google同期の実装証跡
 
 ## フォルダー案内
 

@@ -4,11 +4,11 @@
 
 対象: Git追跡対象、v2文書・E2E・証跡画像、ローカルbuild、GitHub Pages公開demo
 
-判定: **ローカル利用・GitHub掲載準備・架空demoのURL公開は合格。実Googleアカウント接続だけ未確認。**
+判定: **ローカル利用・GitHub Pages公開入口・Google/Drive Mock同期・GitHub掲載準備は合格。実Googleアカウント接続だけ未確認。**
 
 ## Function
 
-- [x] 既存UIトーンを維持し、PC幅と390px幅で操作できる。
+- [x] 既存UIトーンを維持し、PC幅と320px幅で操作できる。
 - [x] 企業の作成・表示・編集・削除が動く。
 - [x] 選考予定の作成・編集・状態変更・削除が動く。
 - [x] 選考status、締切、期限超過、7日以内、面接情報、メモを扱える。
@@ -69,7 +69,10 @@
 - [x] Drive `version`とAppData `revision`が変化した場合は保存を止め、ローカル案をJSON退避できる。
 - [x] 競合中は本人用編集を停止し、remote再読込前にlocal案を自動退避する。
 - [x] backup importはRepositoryのpreview/commitを通り、保存成功確認後だけ画面を置き換える。
-- [x] local v1を本人確認後にDriveへ移す導線がある。成功後も旧localデータを即削除しない。
+- [x] local v1/v2を本人確認後にDriveへ移す導線がある。成功後も旧localデータを即削除しない。
+- [x] Driveと端末の両方にデータがあれば更新日時と選択肢を示し、自動上書きしない。
+- [x] 401/期限切れでは未保存stateを保持し、ユーザー操作の再接続後に同じ基準versionで再保存する。
+- [x] logout後のaccount A/B分離をcomponentと320px幅E2Eで確認した。
 - [x] Mock/contractでempty remote、existing remote、load、save、retry、permanent failure、conflict、Auth状態を確認した。
 - [ ] 本人Googleログイン、OAuth同意、実`appDataFolder`保存、別端末読込は未確認。
 
@@ -81,16 +84,16 @@
 |---|---|
 | `pnpm run lint` | 成功 |
 | `pnpm exec tsc -p tsconfig.app.json --noEmit` | 成功 |
-| `pnpm run test` | 24 files / 119 tests 成功 |
-| `pnpm run build` | 143 modules、production build成功 |
-| `pnpm run test:e2e` | Edgeで機能6件＋撮影2件、計8件成功 |
+| `pnpm run test` | 25 files / 130 tests 成功 |
+| `pnpm run build` | 144 modules、production build成功 |
+| `pnpm run test:e2e` | Edgeで従来8件＋Google/Driveモック1件、計9件成功 |
 | 実ブラウザー確認 | 主要4画面表示、console error 0件 |
 
 最初の機能E2EではAI候補名がJSON textareaとheadingの両方へ一致しました。文字列だけのlocatorをrole付きheadingへ変更し、全件再成功しました。撮影時のsandbox権限エラーは、ローカルテストだけに限定した許可済み実行で解消しました。
 
 ## Security
 
-- [x] `.env`、`.env.*`、`*.local`をignoreし、`.env.example`だけを許可している。
+- [x] 実`.env`と`.env.local`をignoreし、空の`.env.example`と架空Client IDだけの`.env.e2e-google`だけを許可している。
 - [x] `node_modules`、`dist`、coverage、Playwright出力、logをGit除外している。
 - [x] secret形式、client secret実値、API key、private key、OAuth token実値を検出しなかった。
 - [x] `dangerouslySetInnerHTML`を使用していない。
@@ -112,14 +115,14 @@
 - [x] 既存commitを削除、squash、再初期化していない。
 - [x] v2を設計、data/migration、scoring/master、AI/Watch、Google/Drive、UI、test、docsの理解可能な単位へ分けた。
 - [x] `.env.local`、`node_modules`、`dist`、`test-results`を追跡していない。
-- [x] source repositoryはremoteなしを維持し、全source・Git履歴を公開していない。
-- [x] 公開repositoryへは監査済みproduction build 4ファイルだけを独立root commitとしてpushした。
-- [x] GitHub Pagesの`status: built`、HTTPS、公開デモ表示、本人用停止を実URLで確認した。
+- [x] Phase 18のbuild-only `main`をrollback用に残し、Phase 19の監査済みsource/docsは別`source` branchへ追加する。
+- [x] GitHub ActionsはRepository VariableからClient IDを受け取り、`source` branchのproduction buildをPages artifactへする。
+- [ ] GitHub Pagesのworkflow deployと公開URL上の新入口確認はsource push後に最終確認する。
 
 ## Docs・Evidence・Portfolio
 
-- [x] README、00〜11、Google setup、AI Sync format、公開roadmapを現行実装へ更新した。
-- [x] Phase 0〜10を歴史として保持し、Phase 11〜18を追加した。
+- [x] README、00〜12、Google setup、AI Sync format、公開roadmapを現行実装へ更新した。
+- [x] Phase 0〜10を歴史として保持し、Phase 11〜19を追加した。
 - [x] 各新Phaseに変更前後、コマンド、実エラー、面接30秒説明、理解度チェック、答え、5分復習がある。画面Phaseは画像、domain/test Phaseはコード・実行結果を証跡にしている。
 - [x] portfolioの要約、面接ガイド、初心者向け構成、開発ストーリー、AI利用説明を更新した。
 - [x] AI協働範囲、ユーザー決定、Codex補完、検証済み、未確認を区別した。
@@ -133,13 +136,13 @@
 - [x] Google Drive APIの標準利用に関する説明は確認日付きで、将来変更可能と明記した。
 - [x] Billing要求、カード要求、quota引上げが必要な場合は作業を止める方針である。
 - [x] 公開repositoryのGitHub Pagesだけを使用し、カスタムドメインや有料プランを契約していない。
-- [x] 公開buildは`VITE_STORAGE_MODE=disabled`で、本人用データを保存・送信しない。
+- [x] 公開buildは`VITE_STORAGE_MODE=google`で、Client ID未設定時は接続を無効化し、設定後も本人データは各自のappDataFolderだけへ保存する。
 
 ## 残る本人作業
 
 - [ ] `docs/GOOGLE_AUTH_SETUP.md`を読み、Billingを有効化せずGoogle Cloud ProjectとWeb OAuth Client IDを本人が作成する。
 - [ ] 実Googleアカウントでログイン、保存、再読込、別端末、競合表示、logoutを確認する。
 - [ ] 各Phaseの理解度チェックへ自分の言葉で回答し、30秒・1分説明を練習する。
-- [ ] 全sourceを将来GitHub公開する場合は、公開範囲、ライセンス、連絡先placeholder、法的draftを本人が別途確認する。
+- [ ] 公開前のPrivacy/Terms草案について、運営者情報、連絡先placeholder、法的適合性を本人が確認する。
 
-これらは本人認証、実Google接続、学習、source公開判断であり、今回Codexが勝手に実行していない残作業です。架空demo buildだけのURL公開は、ユーザーの明示依頼に基づき完了しています。
+これらは本人認証、実Google接続、学習、法的確認であり、Codexが本人に代わって実行できない残作業です。source公開とPages workflow化はユーザーの明示依頼に基づいて実行します。

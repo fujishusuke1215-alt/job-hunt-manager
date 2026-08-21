@@ -13,7 +13,7 @@
 9. Driveへの保存はsubmit、status、import commit等のstate変更単位で行い、キー入力単位では行わない。
 10. retryは一時的なquota 403、429、500/502/503/504だけを最大4回とする。無限retryしない。
 11. Drive v3に原子的ETag条件更新を仮定せず、version+AppData revisionの事前競合検知に留める。
-12. Watch Providerは手動AI JSONだけを実装し、Gmail/Web Watch Providerはcontractだけにする。AiProviderは将来用contractだけで、外部AI実装は置かない。
+12. Watch Providerは手動AI JSONだけを実装し、Gmail/Web Watch Providerはcontractだけにする。AI連携はdomainのJSON取込serviceまでとし、外部AiProviderや有料AI実装は置かない。
 13. Watchの今日対応は透明なruleで並べ、AI scoreを使わない。
 14. AI分析exportは企業memo・event memo・選考場所を既定で除き、明示checkbox時だけまとめて含める。
 15. 公開文書はdraftとし、一般公開前に本人確認・必要な法的レビューを行う。
@@ -29,4 +29,4 @@
 
 ## 仮定していないこと
 
-Google実同期、Gmail自動監視、Web定期調査、全source公開、OAuth verification、法的適合性、将来もGoogle APIが絶対無料であることは仮定していません。外部公開は架空demoのproduction build 4ファイルだけです。
+Google実同期、Gmail自動監視、Web定期調査、OAuth verification、法的適合性、将来もGoogle APIが絶対無料であることは仮定していません。Phase 19でsource公開はユーザーが明示承認しましたが、個人データと認証情報は公開しません。

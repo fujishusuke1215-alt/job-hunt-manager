@@ -45,8 +45,8 @@ StorageRepositoryをLocal/Driveから分けました。GoogleはGIS Token model�
 
 ## 10. 完成確認
 
-TypeScript、ESLint、production build、119 unit/component、6 Edge E2Eに成功しました。スクリーンショットは架空Webアプリ領域だけです。既存コミットを消さず、v2もdata、scoring/master、AI/watch、Google、UI、test/docsの単位で追加しました。
+TypeScript、ESLint、production build、130 unit/component、9 Edge E2Eに成功しました。スクリーンショットは架空Webアプリ領域だけです。既存コミットを消さず、v2もdata、scoring/master、AI/watch、Google、UI、test/docsの単位で追加しました。
 
 ## 11. 誠実に残す未完了
 
-Google実login/Drive同期、Gmail自動監視、Web定期調査は未実施です。外部公開はPhase 18で架空demoのproduction build 4ファイルだけをGitHub Pagesへ配信しました。完成した本人用機能は「安全な手動AI Syncと、実Google接続前までのAuth/Driveコード・Mock」です。
+Google実login/Drive同期、Gmail自動監視、Web定期調査は未実施です。Phase 18の架空demo公開後、Phase 19で公開入口、Actions Variable、401再接続、端末移行、account分離E2Eを追加しました。完成した本人用機能は「安全な手動AI Syncと、実Google本人試験前までのAuth/Driveコード・Mock」です。

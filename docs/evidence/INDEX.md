@@ -21,6 +21,7 @@
 | 16 | v2テスト | `phase-16-v2-testing/README.md` | 119 unit/component・6機能E2E | 完了 |
 | 17 | v2リリース監査 | `phase-17-v2-release/screenshots/01-v2-dashboard.png` | 証跡保護・安全監査・公開準備 | 完了 |
 | 18 | 無料公開デモ | `phase-18-public-deployment/screenshots/01-live-public-demo.png` | GitHub Pages・最小公開payload・無料条件 | 公開中 |
+| 19 | Pages + Google本人用 | `phase-19-github-pages-google-drive/screenshots/01-public-entry.png` | GIS・Drive・再接続・端末移行・account分離 | Mock/E2E完了／実Google未確認 |
 
 ## v2を学ぶ順番
 
@@ -28,6 +29,7 @@
 2. Phase 12〜14で、評価・企業照合・AI差分・Watchの規則を追います。
 3. Phase 15で、Google実接続済みではなくMock/contractまでであることを確認します。
 4. Phase 16でテストの守備範囲、Phase 17で最終画面と監査結果を確認します。
-5. Phase 18で、全ソースではなくbuildだけを安全に公開した判断を確認します。
+5. Phase 18で、最初にbuildだけを安全に公開した判断を確認します。
+6. Phase 19で、ユーザーの追加公開指示後にGoogle本人用とsource workflowへ発展させた流れを確認します。
 
 Phase 0〜10は初版の歴史的証跡です。v2に合わせて過去を書き換えず、「初版から何を改善したか」を説明する材料として残しています。

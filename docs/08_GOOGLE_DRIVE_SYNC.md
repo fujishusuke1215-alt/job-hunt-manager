@@ -97,6 +97,21 @@ Drive API v3のFile resourceには`version`、`modifiedTime`等があります�
 
 状態は利用者へ明示し、失敗中に「保存済み」と表示しません。
 
+## GitHub Pages公開版
+
+公開URLではGitHub Actionsが`VITE_STORAGE_MODE=google`を明示し、`VITE_GOOGLE_CLIENT_ID`をRepository Variableからbuildへ渡します。変数未設定時はGoogleボタンを無効化し、本人用をlocalStorageへ黙ってfallbackしません。Authorized JavaScript originはpathを含まない`https://fujishusuke1215-alt.github.io`です。
+
+401またはtoken期限切れでは、未保存のReact stateをメモリに保持して「Google Driveへ再接続」を表示します。同じaccountなら前回のexpected versionで再保存し、別accountが選ばれた場合は旧Personal stateを破棄して新accountのDriveを読みます。
+
+## 端末localStorageからDriveへ
+
+Google接続後にlocalStorage v2を優先して検証し、なければv1を検証・v2へ変換します。
+
+- Driveが空: `移行する / 新規で開始 / キャンセル`
+- Driveと端末の両方にデータ: 更新時刻を表示し、`Driveを使用 / 端末から上書き / JSON退避`
+
+移行成功後も元localStorageは削除しません。v1は別legacy backup keyにも原文を退避します。invalidな端末データやDriveデータは自動反映しません。
+
 ## 料金方針
 
 Google公式では標準利用に追加費用なしと説明されていますが、2026年後半のquota超過課金予定も案内されています。Billing accountを接続せず、カード登録、quota引上げ、trialを行いません。設定時には[最新の公式limits/pricing](https://developers.google.com/workspace/drive/api/guides/limits)を本人が再確認します。
