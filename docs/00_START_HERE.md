@@ -6,7 +6,7 @@ Job Hunt Manager v2は、応募・検討企業を登録した後の「選考、�
 
 ## 5分で試す
 
-1. PowerShellで `pnpm run dev` を実行し、表示URLを開く。
+1. [公開デモ](https://fujishusuke1215-alt.github.io/job-hunt-manager/)を開く。またはPowerShellで `pnpm run dev` を実行し、表示URLを開く。
 2. 右上が「公開デモ」であることを確認する。
 3. 「企業・選考管理」で検索、企業カード、選考予定を試す。
 4. 「評価設定」でプロファイルを複製し、評価項目を変更する。
@@ -24,6 +24,7 @@ Job Hunt Manager v2は、応募・検討企業を登録した後の「選考、�
 6. [10_WATCH_ARCHITECTURE.md](10_WATCH_ARCHITECTURE.md): 今回と将来のWatch境界
 7. [evidence/INDEX.md](evidence/INDEX.md): Phase 0〜17の実際の履歴
 8. [portfolio/INTERVIEW_GUIDE.md](portfolio/INTERVIEW_GUIDE.md): 面接練習
+9. [evidence/phase-18-public-deployment/README.md](evidence/phase-18-public-deployment/README.md): URL公開と最小payload
 
 ## フォルダー案内
 

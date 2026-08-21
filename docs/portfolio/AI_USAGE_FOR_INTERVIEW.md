@@ -9,7 +9,7 @@
 - 実際の約50社管理というproblem definition。
 - v1で感じた課題とv2の詳細Acceptance Criteria。
 - Company Master、dynamic scoring、Research Fact、AI Watch、Driveという方向。
-- 個人情報、Gmail scope、課金、外部公開の禁止。
+- 個人情報、Gmail scope、課金の禁止。外部公開は後の明示依頼で架空demo buildだけへ限定。
 - 既存UI/Git/evidenceを守り、学習証跡を同じ重さにする判断。
 
 ## Codexが担ったこと

@@ -2,6 +2,10 @@
 
 応募・検討している企業を登録した後、選考、締切、企業評価、採用情報の変化を一元管理し、「次に何をするか」を判断しやすくする個人用Webアプリです。実用品、就活ポートフォリオ、Web開発初心者の学習証跡を同じ重さで作っています。
 
+**公開デモ:** <https://fujishusuke1215-alt.github.io/job-hunt-manager/>
+
+公開URLは完全な架空データだけを使い、本人用保存を無効化したデモ専用buildです。インストールやログインなしで開けます。
+
 ![v2ダッシュボード](docs/portfolio/screenshots/v2-dashboard.png)
 
 画像と同梱デモは完全な架空データです。実企業、実応募状況、実メール、担当者情報は含みません。
@@ -128,4 +132,6 @@ pnpm run test:e2e
 
 ## 公開方針
 
-今回はローカル実行とGitHub掲載可能な状態までです。外部公開、GitHub push、OAuth本番設定、Billingは行っていません。ライセンス、公開範囲、法的文書は利用者本人が確認してから決定します。
+架空データのproduction build 4ファイルだけをGitHub Pagesへ公開しました。ソースコード、Git履歴、学習資料、本人用データ、Google設定は公開repositoryへ送っていません。
+
+GitHub Pagesは公開repositoryで無料利用し、カード、Billing、有料プラン、カスタムドメインは設定していません。OAuth本番設定と実Google接続は引き続き未実施です。

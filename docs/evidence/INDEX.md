@@ -20,6 +20,7 @@
 | 15 | Google Auth・Drive境界 | `phase-15-google-drive/screenshots/01-local-development-mode.png` | 限定scope・競合停止・Mock | Mock完了／実Google未確認 |
 | 16 | v2テスト | `phase-16-v2-testing/README.md` | 119 unit/component・6機能E2E | 完了 |
 | 17 | v2リリース監査 | `phase-17-v2-release/screenshots/01-v2-dashboard.png` | 証跡保護・安全監査・公開準備 | 完了 |
+| 18 | 無料公開デモ | `phase-18-public-deployment/screenshots/01-live-public-demo.png` | GitHub Pages・最小公開payload・無料条件 | 公開中 |
 
 ## v2を学ぶ順番
 
@@ -27,5 +28,6 @@
 2. Phase 12〜14で、評価・企業照合・AI差分・Watchの規則を追います。
 3. Phase 15で、Google実接続済みではなくMock/contractまでであることを確認します。
 4. Phase 16でテストの守備範囲、Phase 17で最終画面と監査結果を確認します。
+5. Phase 18で、全ソースではなくbuildだけを安全に公開した判断を確認します。
 
 Phase 0〜10は初版の歴史的証跡です。v2に合わせて過去を書き換えず、「初版から何を改善したか」を説明する材料として残しています。

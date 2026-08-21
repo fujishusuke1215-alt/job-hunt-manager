@@ -2,9 +2,9 @@
 
 監査日: 2026-08-21
 
-対象: Git追跡対象、v2文書・E2E・証跡画像、ローカルbuild
+対象: Git追跡対象、v2文書・E2E・証跡画像、ローカルbuild、GitHub Pages公開demo
 
-判定: **ローカル利用・GitHub掲載準備は合格。実Googleアカウント接続だけ未確認。**
+判定: **ローカル利用・GitHub掲載準備・架空demoのURL公開は合格。実Googleアカウント接続だけ未確認。**
 
 ## Function
 
@@ -104,7 +104,7 @@
 - [x] ソース、テスト、v2画像は完全な架空企業・`.example`/`.test` URLだけを使用する。
 - [x] 氏名、実メール、電話、住所、password、Cookie、実応募状況、面接内容、担当者情報を含めない。
 - [x] Windowsデスクトップ全体を撮影せず、Webアプリだけを撮影した。
-- [x] Phase 0〜10の歴史画像をv2撮影で上書きしないよう、出力先をPhase 12〜17へ分離した。
+- [x] Phase 0〜10の歴史画像をv2撮影で上書きしないよう、出力先をPhase 12〜18へ分離した。
 
 ## Git
 
@@ -112,12 +112,14 @@
 - [x] 既存commitを削除、squash、再初期化していない。
 - [x] v2を設計、data/migration、scoring/master、AI/Watch、Google/Drive、UI、test、docsの理解可能な単位へ分けた。
 - [x] `.env.local`、`node_modules`、`dist`、`test-results`を追跡していない。
-- [x] 外部remote追加、GitHub push、公開を行っていない。
+- [x] source repositoryはremoteなしを維持し、全source・Git履歴を公開していない。
+- [x] 公開repositoryへは監査済みproduction build 4ファイルだけを独立root commitとしてpushした。
+- [x] GitHub Pagesの`status: built`、HTTPS、公開デモ表示、本人用停止を実URLで確認した。
 
 ## Docs・Evidence・Portfolio
 
 - [x] README、00〜11、Google setup、AI Sync format、公開roadmapを現行実装へ更新した。
-- [x] Phase 0〜10を歴史として保持し、Phase 11〜17を追加した。
+- [x] Phase 0〜10を歴史として保持し、Phase 11〜18を追加した。
 - [x] 各新Phaseに変更前後、コマンド、実エラー、面接30秒説明、理解度チェック、答え、5分復習がある。画面Phaseは画像、domain/test Phaseはコード・実行結果を証跡にしている。
 - [x] portfolioの要約、面接ガイド、初心者向け構成、開発ストーリー、AI利用説明を更新した。
 - [x] AI協働範囲、ユーザー決定、Codex補完、検証済み、未確認を区別した。
@@ -126,17 +128,18 @@
 
 ## 無課金・外部状態
 
-- [x] Billing、カード、trial、有料API、有料DB、ホスティングを設定していない。
+- [x] Billing、カード、trial、有料API、有料DB、有料hostingを設定していない。
 - [x] OpenAI/Gemini等の有料APIをアプリから呼ばない。
 - [x] Google Drive APIの標準利用に関する説明は確認日付きで、将来変更可能と明記した。
 - [x] Billing要求、カード要求、quota引上げが必要な場合は作業を止める方針である。
-- [x] GitHub push、Google Cloud設定、外部公開は行っていない。
+- [x] 公開repositoryのGitHub Pagesだけを使用し、カスタムドメインや有料プランを契約していない。
+- [x] 公開buildは`VITE_STORAGE_MODE=disabled`で、本人用データを保存・送信しない。
 
 ## 残る本人作業
 
 - [ ] `docs/GOOGLE_AUTH_SETUP.md`を読み、Billingを有効化せずGoogle Cloud ProjectとWeb OAuth Client IDを本人が作成する。
 - [ ] 実Googleアカウントでログイン、保存、再読込、別端末、競合表示、logoutを確認する。
 - [ ] 各Phaseの理解度チェックへ自分の言葉で回答し、30秒・1分説明を練習する。
-- [ ] GitHub公開前にリポジトリ名、公開範囲、連絡先placeholder、ライセンス、法的draftを本人が確認する。
+- [ ] 全sourceを将来GitHub公開する場合は、公開範囲、ライセンス、連絡先placeholder、法的draftを本人が別途確認する。
 
-これらは本人認証、実サービス接続、学習、公開判断であり、今回Codexが勝手に実行していない残作業です。
+これらは本人認証、実Google接続、学習、source公開判断であり、今回Codexが勝手に実行していない残作業です。架空demo buildだけのURL公開は、ユーザーの明示依頼に基づき完了しています。

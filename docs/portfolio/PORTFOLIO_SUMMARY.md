@@ -1,5 +1,7 @@
 # Job Hunt Manager v2 ポートフォリオ要約
 
+公開デモ: <https://fujishusuke1215-alt.github.io/job-hunt-manager/>
+
 ## 何を作ったか
 
 応募・検討企業を登録した後、選考、締切、自分の評価、根拠付き採用情報、ChatGPT調査から得た変化を一元管理するReact/TypeScriptアプリです。企業検索ではなく「登録後の継続管理」を中心にしています。
@@ -48,3 +50,5 @@
 ## 現在の限界
 
 Gmail自動監視、採用Web定期巡回、browserを閉じた後のscheduler、一般企業検索、広告は未実装です。Google実接続と複数端末実機試験も本人操作後の確認項目です。
+
+公開URLは架空デモ専用で、本人用保存は無効です。GitHub Pagesへ送ったのはproduction build 4ファイルだけで、ソース・Git履歴・学習資料は非公開です。

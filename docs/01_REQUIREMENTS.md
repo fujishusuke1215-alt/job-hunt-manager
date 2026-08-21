@@ -67,13 +67,13 @@
 - Gmail scope、Gmail本文取得、有料AI API、Billing、カード、課金trialを使わない。
 - 競合時は黙って上書きせず、local JSON退避とremote再読込を提示する。
 
-## 今回実装しない
+## v2本体で実装しない
 
 - Gmail自動監視、Restricted scope、メール本文取得
 - 採用Webの自動巡回、ブラウザーを閉じた後のscheduler
 - OpenAI/Gemini等の有料API呼出
 - 中央共有企業DB、一般企業検索、SEOページ、広告
-- FastAPI、PostgreSQL、Docker、Next.js全面移行、外部hosting
+- FastAPI、PostgreSQL、Docker、Next.js全面移行、有料hosting。Phase 18では無料GitHub Pagesへ架空demo buildだけを公開
 - 自動mergeと危険な自動delete
 
 ## 完了判定

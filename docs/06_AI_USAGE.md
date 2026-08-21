@@ -12,7 +12,7 @@
 - 固定ランキング廃止、未評価を0点にしない計算、coverage。
 - v1原文・ID・event・memoを失わないmigration。
 - AI差分preview/個別承認とWatch、Google Drive appDataFolder。
-- Gmail scope、有料API、Billing、カード、外部公開、実データを禁止。
+- Gmail scope、有料API、Billing、カード、実データを禁止。外部公開は当初禁止し、Phase 18でユーザーが無料URL公開を明示依頼した後も架空demo buildだけへ限定。
 - 実Google試験ができない場合はMockまでで、確認済みと誇張しない。
 
 ## Codexが設計補完したもの
@@ -41,6 +41,7 @@
 - Edge機能E2E 6件: demo、検索、詳細、選考、本人用CRUD/保存、dynamic scoring、AI Sync、Watch、v1 migration、v2 download。証跡撮影2件も合わせ、Playwrightは計8件成功。
 - Mock Google Auth/Drive 28件: login states、scope allowlist、load/save、retry、permanent failure、conflict、v1原文退避。
 - 既存4commitとPhase 0〜10の保持、秘密情報pattern監査。
+- GitHub Pages実URL、HTTPS、公開デモ表示、本人用停止、公開payload 4ファイルを確認。
 
 ## 実環境で未確認のもの
 
@@ -48,7 +49,7 @@
 - 本人Googleログイン/2FA。
 - 実Drive appDataFolderのPC→別端末同期。
 - 実Drive API responseに対する競合raceの挙動。
-- 外部hosting/GitHub push/OAuth本番verification。
+- OAuth本番verification。外部hostingは架空demo buildだけGitHub Pagesで確認済みだが、全ソース・Git履歴は非公開。
 
 よって「Google Drive実同期確認済み」とは説明しません。「公式仕様に基づくコードとMock/contractまで完成、本人アカウント試験は未実施」と説明します。
 
@@ -67,7 +68,7 @@
 
 ## ユーザーが今後すること
 
-- Phase 11〜17の理解度チェックへ、READMEを見ずに答える。
+- Phase 11〜18の理解度チェックへ、READMEを見ずに答える。
 - `Company → UserCompany/Master/Fact`の変更を紙に描く。
 - 30秒説明を自分の言葉へ直し、追質問へ答える。
 - Google設定をするなら本人が公式画面と料金を再確認し、秘密情報を入力しない。

@@ -49,4 +49,4 @@ TypeScript、ESLint、production build、119 unit/component、6 Edge E2Eに成�
 
 ## 11. 誠実に残す未完了
 
-Google実login/Drive同期、Gmail自動監視、Web定期調査、外部公開は未実施です。完成したのは「安全な手動AI Syncと、実Google接続前までのAuth/Driveコード・Mock」です。
+Google実login/Drive同期、Gmail自動監視、Web定期調査は未実施です。外部公開はPhase 18で架空demoのproduction build 4ファイルだけをGitHub Pagesへ配信しました。完成した本人用機能は「安全な手動AI Syncと、実Google接続前までのAuth/Driveコード・Mock」です。

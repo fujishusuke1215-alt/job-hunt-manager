@@ -25,7 +25,7 @@
 
 ## 無料・課金方針
 
-React等はOSSです。今回Billing、カード、有料hosting、有料DB、有料AI APIは使いません。Google Drive APIは標準利用が現時点で追加費用なしと公式案内されていますが、quota超過課金方針は変更され得ます。設定時に公式情報を再確認し、Billing accountを紐付けず、要求されたら作業を止めます。
+React等はOSSです。今回Billing、カード、有料hosting、有料DB、有料AI APIは使いません。架空データの公開demoは公開repository向けの無料GitHub Pagesを使い、カスタムドメインも購入していません。Google Drive APIは標準利用が現時点で追加費用なしと公式案内されていますが、quota超過課金方針は変更され得ます。設定時に公式情報を再確認し、Billing accountを紐付けず、要求されたら作業を止めます。
 
 ## 開発環境で実際に起きたこと
 

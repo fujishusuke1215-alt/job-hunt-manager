@@ -29,4 +29,4 @@
 
 ## 仮定していないこと
 
-Google実同期、Gmail自動監視、Web定期調査、外部公開、OAuth verification、法的適合性、将来もGoogle APIが絶対無料であることは仮定していません。
+Google実同期、Gmail自動監視、Web定期調査、全source公開、OAuth verification、法的適合性、将来もGoogle APIが絶対無料であることは仮定していません。外部公開は架空demoのproduction build 4ファイルだけです。

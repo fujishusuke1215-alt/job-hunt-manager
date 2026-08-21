@@ -1,8 +1,10 @@
 # Job Hunt Manager v2 面接ガイド
 
+公開デモ: <https://fujishusuke1215-alt.github.io/job-hunt-manager/>
+
 ## 30秒説明
 
-「約50社の選考・締切・評価・採用情報変化が分散する課題から、React/TypeScriptで就活管理アプリを作りました。初版のlocalStorage単一Companyを実運用視点で見直し、Company Masterと本人情報の分離、自由な評価項目、根拠付きFact、AI差分承認、Google Drive保存境界へ発展させました。119件のunit/componentと6件のEdge機能E2E＋2件の撮影テストで確認し、Google実接続だけは未試験と明記しています。」
+「約50社の選考・締切・評価・採用情報変化が分散する課題から、React/TypeScriptで就活管理アプリを作りました。初版のlocalStorage単一Companyを実運用視点で見直し、Company Masterと本人情報の分離、自由な評価項目、根拠付きFact、AI差分承認、Google Drive保存境界へ発展させました。119件のunit/componentと8件のPlaywrightで確認し、架空demo buildだけを無料のGitHub Pagesへ公開しています。Google実接続だけは未試験と明記しています。」
 
 ## 1分説明
 
