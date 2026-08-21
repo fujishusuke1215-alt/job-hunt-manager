@@ -11,7 +11,7 @@ import { WatchCenter } from './components/WatchCenter'
 import { getRuntimeConfig } from './config/runtime'
 import { demoCatalog } from './data/catalogData'
 import { createDemoAppData } from './data/demoDataV2'
-import { createEmptyAppData, migrateV1Companies, parseLegacyV1, V1_STORAGE_KEY } from './domain/migration'
+import { createEmptyAppData } from './domain/migration'
 import { getActiveScoringProfile, getCompanyViews, getEvaluation } from './domain/selectors'
 import type {
   AppDataV2,
@@ -32,11 +32,18 @@ import { GoogleDriveRestTransport, GoogleDriveStorageRepository } from './reposi
 import { LocalDevelopmentStorageRepository } from './repositories/localDevelopmentStorage'
 import { StaticCatalogRepository } from './repositories/catalog'
 import type { ImportPreview, StorageConflict, StorageRepository } from './repositories/types'
-import { createImportPreview, makeLegacyBackupKey } from './repositories/types'
+import { createImportPreview, serializeAppDataV2, StorageRepositoryError } from './repositories/types'
+import {
+  driveMigrationMarkerKey,
+  inspectLocalDriveCandidate,
+  isSameAppData,
+  localCandidateFingerprint,
+  type LocalDriveCandidate,
+} from './services/localDriveCandidate'
 import { createId } from './utils/id'
 
 type FormState = { kind: 'add' } | { kind: 'edit'; companyId: string } | null
-interface LegacyDriveCandidate { raw: string; data: AppDataV2; backupKey: string }
+type LocalCandidateScenario = 'drive-empty' | 'both'
 
 const catalogRepository = new StaticCatalogRepository(demoCatalog)
 
@@ -64,8 +71,25 @@ function downloadConflict(conflict: StorageConflict) {
   URL.revokeObjectURL(url)
 }
 
+function downloadJson(json: string, fileName: string) {
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = fileName
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+function needsGoogleReconnect(error: unknown): boolean {
+  return error instanceof StorageRepositoryError && (
+    error.code === 'unauthenticated' || error.status === 401
+  )
+}
+
 export default function App() {
   const runtime = useMemo(getRuntimeConfig, [])
+  const [entryChosen, setEntryChosen] = useState(runtime.storageMode !== 'google')
   const [mode, setMode] = useState<AppMode>('demo')
   const [view, setView] = useState<ViewName>('dashboard')
   const [demoData, setDemoData] = useState<AppDataV2>(createDemoAppData)
@@ -77,7 +101,9 @@ export default function App() {
   const [personalSyncMessage, setPersonalSyncMessage] = useState('')
   const [conflict, setConflict] = useState<StorageConflict | null>(null)
   const [account, setAccount] = useState<AuthAccount | null>(null)
-  const [legacyCandidate, setLegacyCandidate] = useState<LegacyDriveCandidate | null>(null)
+  const [localCandidate, setLocalCandidate] = useState<LocalDriveCandidate | null>(null)
+  const [localCandidateScenario, setLocalCandidateScenario] = useState<LocalCandidateScenario | null>(null)
+  const [reconnectRequired, setReconnectRequired] = useState(false)
   const [catalog, setCatalog] = useState<CatalogData>(demoCatalog)
 
   const repositoryRef = useRef<StorageRepository | null>(null)
@@ -87,6 +113,7 @@ export default function App() {
   const personalLoadedRef = useRef(false)
   const storageGenerationRef = useRef(0)
   const conflictRef = useRef<StorageConflict | null>(null)
+  const unsavedPersonalRef = useRef<AppDataV2 | null>(null)
 
   const data = mode === 'demo' ? demoData : personalData
   const profile = getActiveScoringProfile(data)
@@ -124,11 +151,14 @@ export default function App() {
     setConflict(next)
   }
 
-  const loadRepository = async (repository: StorageRepository) => {
+  const loadRepository = async (repository: StorageRepository, googleAccountId: string | null = account?.id ?? null) => {
     const generation = ++storageGenerationRef.current
     setPersonalSyncStatus('loading')
     setPersonalSyncMessage('保存先からデータを読み込んでいます。')
     rememberConflict(null)
+    setReconnectRequired(false)
+    setLocalCandidate(null)
+    setLocalCandidateScenario(null)
     try {
       const result = await repository.load()
       if (generation !== storageGenerationRef.current) return
@@ -141,6 +171,7 @@ export default function App() {
       }
       const loaded = result.status === 'loaded' ? result.data : createEmptyAppData()
       expectedVersionRef.current = result.version
+      unsavedPersonalRef.current = null
       setPersonalData(loaded)
       personalLoadedRef.current = true
       setPersonalSyncStatus('synced')
@@ -148,23 +179,32 @@ export default function App() {
         ? `${loaded.userCompanies.length}社を読み込みました。${result.migratedFromV1 ? ' v1原文は退避し、旧キーも保持しています。' : ''}`
         : '保存先は空です。最初の保存で新規作成します。')
 
-      if (runtime.storageMode === 'google' && result.status === 'empty') {
-        const raw = localStorage.getItem(V1_STORAGE_KEY)
-        if (raw) {
-          try {
-            const now = new Date().toISOString()
-            const backupKey = makeLegacyBackupKey(now)
-            const migrated = migrateV1Companies(parseLegacyV1(raw), { now, sourceKey: V1_STORAGE_KEY, backupKey })
-            setLegacyCandidate({ raw, data: migrated, backupKey })
-          } catch {
-            setPersonalSyncMessage('Driveは空です。ローカルv1候補は検証に失敗したため、自動上書きしていません。')
-          }
+      if (runtime.storageMode === 'google') {
+        const inspection = inspectLocalDriveCandidate(localStorage)
+        if (inspection.warning !== null) {
+          setPersonalSyncMessage(`${result.status === 'empty' ? 'Driveは空です。' : 'Driveを読み込みました。'} ${inspection.warning}`)
+        } else if (
+          inspection.candidate !== null &&
+          (
+            googleAccountId === null ||
+            localStorage.getItem(driveMigrationMarkerKey(googleAccountId)) !== localCandidateFingerprint(inspection.candidate)
+          ) &&
+          (result.status === 'empty' || !isSameAppData(inspection.candidate.data, loaded))
+        ) {
+          setLocalCandidate(inspection.candidate)
+          setLocalCandidateScenario(result.status === 'empty' ? 'drive-empty' : 'both')
+          setPersonalSyncMessage(result.status === 'empty'
+            ? 'Driveは空です。この端末の既存データをどう扱うか選んでください。'
+            : 'Driveとこの端末の両方にデータがあります。自動上書きせず、使用するデータを選んでください。')
         }
       }
     } catch (error) {
       if (generation !== storageGenerationRef.current) return
+      setReconnectRequired(needsGoogleReconnect(error))
       setPersonalSyncStatus('offline')
-      setPersonalSyncMessage(error instanceof Error ? error.message : '保存先を読み込めませんでした。')
+      setPersonalSyncMessage(needsGoogleReconnect(error)
+        ? 'Google Driveへの接続期限が切れました。現在の画面データを保持したまま再接続してください。'
+        : error instanceof Error ? error.message : '保存先を読み込めませんでした。')
     }
   }
 
@@ -180,6 +220,7 @@ export default function App() {
     const repository = repositoryRef.current
     if (!repository || conflictRef.current) return
     const generation = storageGenerationRef.current
+    unsavedPersonalRef.current = next
     setPersonalSyncStatus('saving')
     saveQueueRef.current = saveQueueRef.current.then(async () => {
       if (generation !== storageGenerationRef.current || conflictRef.current) return
@@ -193,12 +234,17 @@ export default function App() {
           return
         }
         expectedVersionRef.current = result.version
+        unsavedPersonalRef.current = null
+        setReconnectRequired(false)
         setPersonalSyncStatus('synced')
         setPersonalSyncMessage('明示的な変更単位で保存しました。')
       } catch (error) {
         if (generation !== storageGenerationRef.current) return
+        setReconnectRequired(needsGoogleReconnect(error))
         setPersonalSyncStatus('offline')
-        setPersonalSyncMessage(error instanceof Error ? error.message : '保存に失敗しました。JSONバックアップを利用してください。')
+        setPersonalSyncMessage(needsGoogleReconnect(error)
+          ? 'Google Driveへの接続期限が切れました。未保存の画面データを保持しています。再接続してください。'
+          : error instanceof Error ? error.message : '保存に失敗しました。JSONバックアップを利用してください。')
       }
     })
   }
@@ -232,6 +278,7 @@ export default function App() {
     }
     setPersonalSyncStatus('loading')
     setPersonalSyncMessage('Googleログインを開始します。')
+    setReconnectRequired(false)
     try {
       const oauth2 = await loadGoogleIdentityServices()
       const provider = new GoogleAuthProvider({ clientId: runtime.googleClientId, oauth2 })
@@ -243,11 +290,72 @@ export default function App() {
       })
       repositoryRef.current = repository
       expectedVersionRef.current = null
-      await loadRepository(repository)
+      unsavedPersonalRef.current = null
+      await loadRepository(repository, signedIn.id)
     } catch (error) {
+      authRef.current = null
+      repositoryRef.current = null
       setAccount(null)
       setPersonalSyncStatus('offline')
       setPersonalSyncMessage(error instanceof Error ? error.message : 'Googleログインに失敗しました。')
+    }
+  }
+
+  const reconnectGoogleDrive = async () => {
+    const provider = authRef.current
+    const previousAccount = account
+    if (!provider || !previousAccount) {
+      await login()
+      return
+    }
+
+    setPersonalSyncStatus('loading')
+    setPersonalSyncMessage('Google Driveへ再接続しています。')
+    try {
+      const signedIn = await provider.signIn()
+      const repository = new GoogleDriveStorageRepository({
+        transport: new GoogleDriveRestTransport({ getAccessToken: () => provider.getAccessToken() }),
+      })
+      repositoryRef.current = repository
+
+      if (signedIn.id !== previousAccount.id) {
+        ++storageGenerationRef.current
+        expectedVersionRef.current = null
+        unsavedPersonalRef.current = null
+        personalLoadedRef.current = false
+        setPersonalData(createEmptyAppData())
+        setLocalCandidate(null)
+        setLocalCandidateScenario(null)
+        rememberConflict(null)
+        setAccount(signedIn)
+        await loadRepository(repository, signedIn.id)
+        return
+      }
+
+      setAccount(signedIn)
+      const pending = unsavedPersonalRef.current
+      if (pending === null) {
+        await loadRepository(repository, signedIn.id)
+        return
+      }
+
+      const result = await repository.save(pending, expectedVersionRef.current ?? undefined)
+      if (result.status === 'conflict') {
+        rememberConflict(result.conflict)
+        setPersonalSyncStatus('conflict')
+        setPersonalSyncMessage(result.conflict.message)
+        return
+      }
+      expectedVersionRef.current = result.version
+      unsavedPersonalRef.current = null
+      setPersonalData(result.data)
+      setReconnectRequired(false)
+      setPersonalSyncStatus('synced')
+      setPersonalSyncMessage('Google Driveへ再接続し、保持していた未保存変更を保存しました。')
+    } catch (error) {
+      setReconnectRequired(true)
+      setPersonalSyncStatus('offline')
+      setPersonalSyncMessage(error instanceof Error ? error.message : 'Google Driveへの再接続に失敗しました。')
     }
   }
 
@@ -260,10 +368,17 @@ export default function App() {
     personalLoadedRef.current = false
     setAccount(null)
     setPersonalData(createEmptyAppData())
-    setLegacyCandidate(null)
+    setLocalCandidate(null)
+    setLocalCandidateScenario(null)
+    setReconnectRequired(false)
+    unsavedPersonalRef.current = null
     rememberConflict(null)
     setPersonalSyncStatus('signed-out')
     setPersonalSyncMessage('ログアウトし、トークン・アカウント表示・個人データをメモリから消去しました。')
+    if (runtime.storageMode === 'google') {
+      setMode('demo')
+      setEntryChosen(false)
+    }
     try {
       await provider?.logout()
     } catch {
@@ -271,21 +386,93 @@ export default function App() {
     }
   }
 
-  const migrateLegacyToDrive = async () => {
-    if (!legacyCandidate || !repositoryRef.current) return
-    localStorage.setItem(legacyCandidate.backupKey, legacyCandidate.raw)
-    const result = await repositoryRef.current.save(legacyCandidate.data, expectedVersionRef.current ?? undefined)
-    if (result.status === 'conflict') {
-      rememberConflict(result.conflict)
-      setPersonalSyncStatus('conflict')
-      setPersonalSyncMessage(result.conflict.message)
-      return
+  const rememberLocalDecision = (candidate: LocalDriveCandidate) => {
+    if (!account) return
+    try {
+      localStorage.setItem(
+        driveMigrationMarkerKey(account.id),
+        localCandidateFingerprint(candidate),
+      )
+    } catch {
+      // marker保存に失敗しても、本人データのDrive保存結果は取り消さない。
     }
-    expectedVersionRef.current = result.version
-    setPersonalData(legacyCandidate.data)
-    setLegacyCandidate(null)
-    setPersonalSyncStatus('synced')
-    setPersonalSyncMessage('v1をDriveへ移行しました。元のv1キーと退避コピーは削除していません。')
+  }
+
+  const saveLocalCandidateToDrive = async () => {
+    if (!localCandidate || !repositoryRef.current) return
+    if (
+      localCandidateScenario === 'both' &&
+      !window.confirm('Google Driveの現在データを、この端末の既存データで上書きします。続けますか？')
+    ) return
+
+    try {
+      if (localCandidate.backupKey !== null) {
+        localStorage.setItem(localCandidate.backupKey, localCandidate.raw)
+      }
+      setPersonalSyncStatus('saving')
+      const result = await repositoryRef.current.save(localCandidate.data, expectedVersionRef.current ?? undefined)
+      if (result.status === 'conflict') {
+        rememberConflict(result.conflict)
+        setPersonalSyncStatus('conflict')
+        setPersonalSyncMessage(result.conflict.message)
+        return
+      }
+      expectedVersionRef.current = result.version
+      setPersonalData(result.data)
+      rememberLocalDecision(localCandidate)
+      setLocalCandidate(null)
+      setLocalCandidateScenario(null)
+      setPersonalSyncStatus('synced')
+      setPersonalSyncMessage(`${localCandidate.source}をDriveへ移行しました。元の端末データは削除していません。`)
+    } catch (error) {
+      setReconnectRequired(needsGoogleReconnect(error))
+      setPersonalSyncStatus('offline')
+      setPersonalSyncMessage(needsGoogleReconnect(error)
+        ? 'Google Driveへの接続期限が切れました。端末データは変更していません。再接続してください。'
+        : error instanceof Error ? error.message : 'Driveへの移行に失敗しました。端末データは変更していません。')
+    }
+  }
+
+  const startWithEmptyDrive = async () => {
+    const repository = repositoryRef.current
+    if (!repository) return
+    try {
+      setPersonalSyncStatus('saving')
+      const initial = createEmptyAppData()
+      const result = await repository.save(initial, expectedVersionRef.current ?? undefined)
+      if (result.status === 'conflict') {
+        rememberConflict(result.conflict)
+        setPersonalSyncStatus('conflict')
+        setPersonalSyncMessage(result.conflict.message)
+        return
+      }
+      expectedVersionRef.current = result.version
+      setPersonalData(result.data)
+      if (localCandidate !== null) rememberLocalDecision(localCandidate)
+      setLocalCandidate(null)
+      setLocalCandidateScenario(null)
+      setPersonalSyncStatus('synced')
+      setPersonalSyncMessage('Google Driveに新しい空のデータを作成しました。端末の既存データは残しています。')
+    } catch (error) {
+      setReconnectRequired(needsGoogleReconnect(error))
+      setPersonalSyncStatus('offline')
+      setPersonalSyncMessage(needsGoogleReconnect(error)
+        ? 'Google Driveへの接続期限が切れました。端末データは変更していません。再接続してください。'
+        : error instanceof Error ? error.message : 'Driveへ新規データを作成できませんでした。')
+    }
+  }
+
+  const cancelLocalMigration = async () => {
+    setLocalCandidate(null)
+    setLocalCandidateScenario(null)
+    await logout()
+  }
+
+  const useRemoteData = () => {
+    if (localCandidate !== null) rememberLocalDecision(localCandidate)
+    setLocalCandidate(null)
+    setLocalCandidateScenario(null)
+    setPersonalSyncMessage('Google Driveのデータを使用します。この端末の既存データは残しています。')
   }
 
   const reloadRemote = async () => {
@@ -336,8 +523,11 @@ export default function App() {
       setPersonalSyncMessage('バックアップの保存完了を確認してから画面へ反映しました。')
     } catch (error) {
       if (generation === storageGenerationRef.current && conflictRef.current === null) {
+        setReconnectRequired(needsGoogleReconnect(error))
         setPersonalSyncStatus('offline')
-        setPersonalSyncMessage(error instanceof Error ? error.message : 'バックアップを保存できませんでした。')
+        setPersonalSyncMessage(needsGoogleReconnect(error)
+          ? 'Google Driveへの接続期限が切れました。バックアップは反映せず、previewを保持しています。再接続してください。'
+          : error instanceof Error ? error.message : 'バックアップを保存できませんでした。')
       }
       throw error
     }
@@ -403,12 +593,42 @@ export default function App() {
     commitData(touch(data, { watchFindings: updateWatchFindingStatus(data.watchFindings, id, status) }))
   }
 
+  const enterDemo = () => {
+    setMode('demo')
+    setEntryChosen(true)
+  }
+
+  const enterGooglePersonal = () => {
+    setMode('personal')
+    setEntryChosen(true)
+    void login()
+  }
+
   const personalGate = mode === 'personal' && (
     runtime.storageMode === 'disabled' || (runtime.storageMode === 'google' && !account)
   )
   const personalEditsBlocked = mode === 'personal' && (
-    conflict !== null || personalSyncStatus === 'loading'
+    conflict !== null || personalSyncStatus === 'loading' || localCandidate !== null
   )
+
+  if (!entryChosen) {
+    return (
+      <main className="welcome-screen">
+        <section className="welcome-card" aria-labelledby="welcome-title">
+          <span className="brand-mark welcome-mark" aria-hidden="true">J</span>
+          <p className="eyebrow">JOB HUNT MANAGER</p>
+          <h1 id="welcome-title">就活の情報を、次の行動へ。</h1>
+          <p>架空データで機能を見るか、自分のGoogle Driveへ接続して本人用データを開きます。</p>
+          <div className="welcome-actions">
+            <button className="secondary-button" type="button" onClick={enterDemo}>デモを見る</button>
+            <button className="primary-button" type="button" disabled={!runtime.googleClientId} onClick={enterGooglePersonal}>Googleアカウントで利用する</button>
+          </div>
+          {!runtime.googleClientId && <p className="welcome-setup-note" role="note">Google Client IDのRepository Variable設定後に本人用接続が有効になります。デモは現在も利用できます。</p>}
+          <small>Drive権限はappDataFolderだけです。Gmailや通常のマイドライブ全体にはアクセスしません。</small>
+        </section>
+      </main>
+    )
+  }
 
   return (
     <AppShell
@@ -417,16 +637,22 @@ export default function App() {
       syncStatus={mode === 'demo' ? 'synced' : personalSyncStatus}
       storageLabel={storageLabel}
       accountEmail={account?.email}
+      accountName={account?.name}
+      accountPictureUrl={account?.pictureUrl}
       authAvailable={runtime.storageMode === 'google'}
+      reconnectRequired={reconnectRequired}
       onModeChange={changeMode}
       onViewChange={setView}
       onLogin={() => void login()}
+      onReconnect={() => void reconnectGoogleDrive()}
       onLogout={() => void logout()}
     >
       {mode === 'demo' && <div className="demo-ribbon" role="note"><strong>公開デモ</strong><span>企業・選考・Watchはすべて架空です。実在企業の情報ではありません。</span></div>}
       {mode === 'personal' && runtime.localDevelopment && <div className="development-ribbon" role="note"><strong>ローカル開発モード</strong><span>Google未設定でも開発・テストできます。本番の本人用モードへ黙って切り替わる設定ではありません。</span></div>}
       {personalSyncMessage && mode === 'personal' && <div className={personalSyncStatus === 'offline' || personalSyncStatus === 'conflict' ? 'notice error' : 'notice'} role="status">{personalSyncMessage}</div>}
-      {mode === 'personal' && legacyCandidate && <div className="notice migration-notice" role="note"><strong>localStorage v1を検出しました</strong><span>{legacyCandidate.data.userCompanies.length}社を検証済みです。旧データを残したままDriveへ移行できます。</span><button className="primary-button small" type="button" disabled={personalEditsBlocked} onClick={() => void migrateLegacyToDrive()}>確認してDriveへ移行</button><button className="text-button" type="button" onClick={() => setLegacyCandidate(null)}>今回はしない</button></div>}
+      {mode === 'personal' && reconnectRequired && account && <div className="notice error reconnect-notice" role="alert"><strong>Google Driveへの再接続が必要です</strong><span>画面上の未保存変更はメモリに保持しています。別アカウントを選んだ場合は混在させず、そのアカウントのDriveを新しく読み込みます。</span><button className="primary-button small" type="button" onClick={() => void reconnectGoogleDrive()}>Google Driveへ再接続</button></div>}
+      {mode === 'personal' && localCandidate && localCandidateScenario === 'drive-empty' && <div className="notice migration-notice" role="note"><strong>この端末の既存データを検出しました</strong><span>localStorage {localCandidate.source} / {localCandidate.data.userCompanies.length}社 / 更新 {new Date(localCandidate.updatedAt).toLocaleString('ja-JP')}。元データは削除しません。</span><button className="primary-button small" type="button" onClick={() => void saveLocalCandidateToDrive()}>移行する</button><button className="secondary-button" type="button" onClick={() => void startWithEmptyDrive()}>新規で開始</button><button className="text-button" type="button" onClick={() => void cancelLocalMigration()}>キャンセル</button></div>}
+      {mode === 'personal' && localCandidate && localCandidateScenario === 'both' && <div className="notice migration-notice" role="note"><strong>Driveとこの端末の両方にデータがあります</strong><span>Google Drive: 更新 {new Date(personalData.updatedAt).toLocaleString('ja-JP')} / この端末 ({localCandidate.source}): 更新 {new Date(localCandidate.updatedAt).toLocaleString('ja-JP')}。自動統合・自動上書きはしません。</span><button className="primary-button small" type="button" onClick={useRemoteData}>Google Driveのデータを使用</button><button className="secondary-button" type="button" onClick={() => void saveLocalCandidateToDrive()}>この端末のデータをDriveへ上書き</button><button className="secondary-button" type="button" onClick={() => downloadJson(serializeAppDataV2(localCandidate.data), 'job-hunt-manager-local-candidate-v2.json')}>JSONバックアップをダウンロード</button></div>}
       {mode === 'personal' && conflict && <div className="notice error conflict-notice" role="alert" id="conflict-edit-lock"><strong>同期競合のため自動上書きと本人用データの編集を停止しました</strong><span>{conflict.message}</span><span>現在のlocal案はJSON退避できます。remote再読込を選ぶ場合も、先に同じlocal案を自動ダウンロードします。</span>{conflict.localBackup && <button className="secondary-button" type="button" onClick={() => downloadConflict(conflict)}>local案をJSON退避</button>}<button className="secondary-button" type="button" onClick={() => void reloadRemote()}>{conflict.localBackup ? 'local案を退避してremote再読込' : 'remoteを再読込'}</button></div>}
 
       <fieldset disabled={personalEditsBlocked} aria-describedby={mode === 'personal' && conflict ? 'conflict-edit-lock' : undefined} style={{ border: 0, margin: 0, minWidth: 0, padding: 0, width: '100%' }}>

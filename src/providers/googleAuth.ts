@@ -64,6 +64,16 @@ function authMessage(error: unknown): string {
   return 'Googleログインに失敗しました。もう一度お試しください。'
 }
 
+function safeGooglePictureUrl(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' ? url.toString() : null
+  } catch {
+    return null
+  }
+}
+
 export async function loadGoogleIdentityServices(
   ownerDocument: Document = document,
   timeoutMs = 15_000,
@@ -306,7 +316,7 @@ export class GoogleAuthProvider implements AuthProvider {
       id: candidate.sub,
       email: candidate.email,
       name: candidate.name,
-      pictureUrl: typeof candidate.picture === 'string' ? candidate.picture : null,
+      pictureUrl: safeGooglePictureUrl(candidate.picture),
     }
   }
 

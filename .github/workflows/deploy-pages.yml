@@ -2,7 +2,7 @@ name: Deploy public demo to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, source]
   workflow_dispatch:
 
 permissions:
@@ -32,10 +32,11 @@ jobs:
       - name: Install dependencies from lockfile
         run: pnpm install --frozen-lockfile
 
-      - name: Build demo-only site
+      - name: Build GitHub Pages site
         run: pnpm run build
         env:
-          VITE_STORAGE_MODE: disabled
+          VITE_STORAGE_MODE: google
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

@@ -8,10 +8,14 @@ interface AppShellProps {
   syncStatus: SyncStatus
   storageLabel: string
   accountEmail?: string
+  accountName?: string
+  accountPictureUrl?: string | null
   authAvailable: boolean
+  reconnectRequired: boolean
   onModeChange: (mode: AppMode) => void
   onViewChange: (view: ViewName) => void
   onLogin: () => void
+  onReconnect: () => void
   onLogout: () => void
 }
 
@@ -40,10 +44,14 @@ export function AppShell({
   syncStatus,
   storageLabel,
   accountEmail,
+  accountName,
+  accountPictureUrl,
   authAvailable,
+  reconnectRequired,
   onModeChange,
   onViewChange,
   onLogin,
+  onReconnect,
   onLogout,
 }: AppShellProps) {
   return (
@@ -53,11 +61,12 @@ export function AppShell({
           <span className="brand-mark" aria-hidden="true">J</span>
           <span><strong>Job Hunt Manager</strong><small>選考を、次の行動へ。</small></span>
         </button>
-        <div className="topbar-status" aria-label={`保存状態 ${syncLabels[syncStatus]}`}>
+        <div className="topbar-status" aria-label={`保存状態 ${syncLabels[syncStatus]}${accountEmail ? ` / Google接続済み ${accountEmail}` : ''}`}>
+          {accountPictureUrl && <img className="account-avatar" src={accountPictureUrl} alt="" referrerPolicy="no-referrer" />}
           <span className={`sync-dot ${syncStatus}`} aria-hidden="true" />
-          <span><strong>{syncLabels[syncStatus]}</strong><small>{accountEmail ?? storageLabel}</small></span>
+          <span><strong>{syncLabels[syncStatus]}</strong><small>{accountName ? `${accountName} / ${accountEmail}` : accountEmail ?? storageLabel}</small></span>
           {mode === 'personal' && authAvailable && (accountEmail
-            ? <button className="text-button" type="button" onClick={onLogout}>ログアウト</button>
+            ? <>{reconnectRequired && <button className="text-button" type="button" onClick={onReconnect}>再接続</button>}<button className="text-button" type="button" onClick={onLogout}>ログアウト</button></>
             : <button className="text-button" type="button" onClick={onLogin}>Googleで接続</button>)}
         </div>
         <ModeSwitch mode={mode} onChange={onModeChange} />
