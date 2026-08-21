@@ -1,42 +1,50 @@
-# ポートフォリオ要約
+# Job Hunt Manager v2 ポートフォリオ要約
 
 ## 何を作ったか
 
-企業、応募条件、評価、複数の選考予定、締切をまとめ、次の対応をダッシュボードで確認できる就活管理Webアプリです。
+応募・検討企業を登録した後、選考、締切、自分の評価、根拠付き採用情報、ChatGPT調査から得た変化を一元管理するReact/TypeScriptアプリです。企業検索ではなく「登録後の継続管理」を中心にしています。
 
-## なぜ作ったか
+## 実際の課題
 
-応募先が増えると、企業比較と締切が複数のページやメモへ分散します。また、既存の成果物に不足していた「利用課題から要件を決め、普通のWebサービスを最後まで作る経験」を補う目的がありました。
+約50社規模になると、企業情報、応募資格、テスト、面接、締切、優先度が複数のページ・メール・会話へ分散します。初版を使う中で、1つのCompanyへ企業情報と本人情報が混在し、固定weight、1ブラウザー保存、出典なし情報、AI結果の手作業反映が次の課題になりました。
 
-## 誰のどんな問題を解決するか
+## v1からv2への改善
 
-主利用者は就活中の本人です。複数社を並行管理する際の、締切見落とし、応募資格の再確認、優先順位判断を支援します。採用担当者には、架空データの公開デモとして安全に見せられます。
+| v1 | v2 |
+|---|---|
+| Company文字列中心 | Company Master恒久ID + User Company |
+| 固定8項目weight | 編集可能なScoring Profile/Criteria |
+| 未評価の意味が曖昧 | 暫定score + coverage |
+| 値だけの採用情報 | Research Fact + Source + 確認状態 |
+| AI結果を手作業転記 | Zod検証 + diff preview + 個別承認 |
+| Watch構造なし | Finding/Run、fingerprint dedup、Center |
+| localStorage v1 | StorageRepository、v2、Drive境界 |
 
-## 主な機能
+## 主な技術判断
 
-- 企業CRUDと応募資格・テスト・評価管理
-- 1社対複数選考予定、面接情報、締切警告
-- 検索、複合フィルター、並び替え
-- 状態集計、直近予定、総合ランキング
-- localStorage、JSONバックアップ、デモ/本人分離
-- レスポンシブUI
+既存UIとGit履歴を守り、React/Viteを維持しました。今回の手動同期はSPAで成立するため、FastAPI、PostgreSQL、Docker、Next.js、有料APIを追加していません。一方、将来backendを加えられるようAuth/Storage/Catalog/Watchをinterfaceで分離し、AIは`analyze`/`normalize`を持つ将来用contractだけを定義しました。外部AI実装やAPI呼出しはありません。
 
-## 技術と規模
+## 安全性
 
-React / TypeScript / Vite / localStorage / Vitest / Testing Library / Playwright / ESLint / Git。初版はサーバー不要のSPAです。
+- v1原文をvalidation前に退避し、旧keyを即削除しない。
+- 外部JSONをZodで検証し、preview前はstate不変。
+- 曖昧な企業照合とAI deleteを自動実行しない。
+- Drive scopeは`drive.appdata`だけ。Gmail scopeなし。
+- tokenはメモリだけ、URLはhttp/httpsだけ。
+- demo/test/screenshotは完全な架空企業だけ。
 
-## 工夫
+## 品質
 
-- 要件の出典とAI補完を分離。
-- 保存処理を画面から分け、将来APIへ交換可能にした。
-- 総合点は過去会話の評価軸を重み付き100点へ換算。
-- 公開デモと本人用を別経路にし、実データの混入を防いだ。
-- 18 unit/component + 3 E2E、lint、buildで確認。
+- TypeScript / ESLint / production build: 成功
+- unit/component: 119件成功（24ファイル）
+- Microsoft Edge E2E: 機能フロー6件＋証跡撮影2件、計8件成功
+- Google Auth/Drive Mock/contract: 28件成功
+- 実Googleアカウント接続: 未実施（確認済みと誇張しない）
 
-## 苦労・改善
+## 説明できる強み
 
-実ブラウザーのHTTP LAN環境で `crypto.randomUUID()` が使えず登録画面が停止しました。機能検出と代替ID生成へ分離し、同じ操作を再実行して修正を確認しました。またVitestとPlaywrightのファイル探索が重なったため、テスト対象を分けました。
+完成画面だけでなく、非破壊migration、domain分離、動的計算、transaction的AI import、同期競合停止、Mockによる外部API検証、Gitの段階的改善を説明できます。また、AI協働範囲と未確認範囲を明示しています。
 
 ## 現在の限界
 
-1ブラウザー用で、端末同期、ログイン、通知、外部調査はありません。これは無課金・個人情報保護・中難度を優先した意図的な範囲です。
+Gmail自動監視、採用Web定期巡回、browserを閉じた後のscheduler、一般企業検索、広告は未実装です。Google実接続と複数端末実機試験も本人操作後の確認項目です。

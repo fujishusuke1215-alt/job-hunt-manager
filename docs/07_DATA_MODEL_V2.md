@@ -22,13 +22,13 @@ erDiagram
     WATCH_RUN ||--o{ WATCH_FINDING : produces
 ```
 
-`MasterCompany.id`は名称から作らない恒久IDです。企業名が変わってもIDを維持し、`merged`になったIDは再利用しません。`UserCompany.masterCompanyId`は`null`を許し、カタログにない企業も登録できます。
+`MasterCompany.id`は名称から作らない恒久IDです。企業名が変わってもIDを維持します。`merged`になったIDを再利用しないことはCatalog管理上の運用規約です。過去に別企業へ使われたかは現在のJSONだけでは判定できないため、runtime schemaは現在の参照先とmerge循環を検査します。`UserCompany.masterCompanyId`は`null`を許し、カタログにない企業も登録できます。
 
 ## 主な型
 
 ### MasterCompany
 
-- `id`: `cmp_`で始まる名称非依存ID
+- `id`: 名称非依存の非空ID。同梱Catalogでは識別しやすい`cmp_`接頭辞を採用するが、schemaの必須形式にはしない
 - `slug`: URLや表示補助用。主キーではない
 - `legalName` / `displayName`
 - `aliases[]` / `formerNames[]`
@@ -131,4 +131,3 @@ Watchは「実際に巡回する処理」ではなく、手動AI取込等で得�
 - disabled criterionの値は消さない。
 - malformed importは現在データを変更しない。
 - DemoとPersonalを同じ保存先へ書かない。
-

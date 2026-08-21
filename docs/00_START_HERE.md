@@ -2,43 +2,60 @@
 
 ## このアプリは何か
 
-Job Hunt Manager は、複数企業の応募条件、評価、選考予定、締切、面接メモを1か所で管理する、個人用の就活管理Webアプリです。締切の見落としと、情報が複数のメモに散らばる問題を減らします。
+Job Hunt Manager v2は、応募・検討企業を登録した後の「選考、締切、評価、根拠付き採用情報、変化」を1か所で管理するWebアプリです。企業検索サイトではなく、自分が受ける企業を継続管理する道具です。
 
-このプロジェクトには、アプリだけでなく「何を、なぜ、どう作ったか」を後から学び直せる資料も含めます。実用品・就活ポートフォリオ・初心者の学習証跡を同じ重さで扱います。
+## 5分で試す
 
-## 使う技術
-
-- React: 画面を小さな部品に分けて組み立てる仕組み
-- TypeScript: データの形を明示できるJavaScript
-- Vite: 開発中の起動と完成版の作成を行う道具
-- localStorage: このブラウザー内だけにデータを保存する仕組み
-- Vitest / Testing Library: 処理と画面を自動確認する道具
-
-初版は外部API、外部データベース、Docker、クラウドを使いません。追加料金、秘密情報の流出、初心者が学ぶ範囲の肥大化を避けるためです。
+1. PowerShellで `pnpm run dev` を実行し、表示URLを開く。
+2. 右上が「公開デモ」であることを確認する。
+3. 「企業・選考管理」で検索、企業カード、選考予定を試す。
+4. 「評価設定」でプロファイルを複製し、評価項目を変更する。
+5. 「AI同期」で `docs/09_AI_SYNC_FORMAT.md` の架空JSONをpreviewする。
+6. 「Watch」で、承認済みの変化だけが表示されることを確認する。
+7. 本人用を押し、「ローカル開発モード」と明示されることを確認する。
 
 ## 読む順番
 
-1. [01_REQUIREMENTS.md](01_REQUIREMENTS.md) で「何を作るか」を確認する
-2. [02_ARCHITECTURE.md](02_ARCHITECTURE.md) でデータの流れを確認する
-3. [03_TECH_STACK.md](03_TECH_STACK.md) で技術を選んだ理由を確認する
-4. [05_BEGINNER_GUIDE.md](05_BEGINNER_GUIDE.md) で用語を確認する
-5. [evidence/INDEX.md](evidence/INDEX.md) で開発順に証跡を見る
-6. 実装後はルートの `README.md` と `docs/portfolio/` を読む
+1. [01_REQUIREMENTS.md](01_REQUIREMENTS.md): 何を作ったか
+2. [02_ARCHITECTURE.md](02_ARCHITECTURE.md): 画面から保存まで
+3. [07_DATA_MODEL_V2.md](07_DATA_MODEL_V2.md): なぜ企業と本人情報を分けたか
+4. [08_GOOGLE_DRIVE_SYNC.md](08_GOOGLE_DRIVE_SYNC.md): 同期と競合停止
+5. [09_AI_SYNC_FORMAT.md](09_AI_SYNC_FORMAT.md): AI候補の安全な取込
+6. [10_WATCH_ARCHITECTURE.md](10_WATCH_ARCHITECTURE.md): 今回と将来のWatch境界
+7. [evidence/INDEX.md](evidence/INDEX.md): Phase 0〜17の実際の履歴
+8. [portfolio/INTERVIEW_GUIDE.md](portfolio/INTERVIEW_GUIDE.md): 面接練習
 
-## どのファイルが何を表すか
+## フォルダー案内
 
-| 場所 | 役割 |
+| 場所 | 現在の役割 |
 |---|---|
-| `src/types.ts` | 企業や選考イベントのデータの形 |
-| `src/data/demoData.ts` | 公開デモ専用の完全な架空データ |
-| `src/services/storage.ts` | ブラウザー保存とデモ分離 |
-| `src/utils/` | 点数、締切、検索などの計算 |
-| `src/components/` | 画面を構成する部品 |
-| `src/App.tsx` | 画面と操作をつなぐ中心 |
-| `src/*.test.ts(x)` | 自動テスト |
-| `docs/evidence/` | フェーズごとの変更、復習、エラー、画像 |
+| `src/domain/` | schema v2、migration、scoring、matching、AI Sync、Watch |
+| `src/repositories/` | Catalogと保存先の境界、Local/Google Drive実装 |
+| `src/providers/` | Google認証、Watch providerの境界 |
+| `src/components/` | 既存UIトーンを保った各画面 |
+| `src/data/` | 完全な架空デモと静的Company Catalog |
+| `src/services/storage.ts` | v1初版の互換・歴史的実装。v2の正規境界はrepositories |
+| `e2e/` | Edgeでの主要導線とWebアプリだけの撮影 |
+| `docs/evidence/` | フェーズ、エラー、復習、30秒説明 |
+| `docs/public/` | 将来公開前に本人確認する法的文書draft |
+
+## モードの違い
+
+| モード | データ | 保存 |
+|---|---|---|
+| 公開デモ | 同梱の架空企業のみ | 外部保存なし。再読込で初期化 |
+| ローカル開発 | 本人用の開発確認 | localStorage。画面に明示 |
+| Google本人用 | Googleログインした本人 | Drive appDataFolder。設定後のみ |
+
+本番buildで設定がないのに、本人用を黙ってlocalStorageへ落とす設計ではありません。
+
+## 初心者が説明できるべき4点
+
+- Company Masterは企業そのもの、User Companyは自分と企業の関係。
+- Scoring Profileのweightは比率で、未評価は0点にせずcoverageへ反映。
+- AI Syncは候補をvalidation/previewし、承認後だけ本データを変える。
+- StorageRepositoryにより、画面はlocalStorageやDrive APIを直接知らない。
 
 ## 安全上の約束
 
-リポジトリにはダミーデータだけを入れます。本人用データはブラウザーのlocalStorageに保存され、Gitには入りません。ただし共有PCでは使わず、バックアップ時は内容を自分で確認してください。
-
+公開デモ、テスト、証跡画像は架空データだけです。password、token、Cookie、API key、実応募情報、担当者連絡先は保存しません。Google実アカウント試験は未実施で、本人認証・2FA・Client ID作成は利用者本人の作業です。

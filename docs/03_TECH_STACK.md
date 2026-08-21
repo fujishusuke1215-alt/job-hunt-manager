@@ -1,24 +1,40 @@
-# 技術選定
+# 技術選定 v2
 
-| 技術 | 一言でいうと | 今回の用途 | 採用理由 | 見送った候補 |
-|---|---|---|---|---|
-| React | 画面を部品で組む仕組み | 一覧、フォーム、ダッシュボード | 状態に応じた画面更新、一般性、学習資料の多さ | 素のJavaScriptは小規模には簡単だが、画面と状態が増えると追いにくい |
-| TypeScript | データの形を検査するJavaScript | Company等の型 | 入力項目の取り違えを開発時に発見しやすい | JavaScriptは開始が速いが、今回の多項目データでは型の利点が大きい |
-| Vite | 開発サーバーとビルドの道具 | 起動、完成版生成 | 設定が少なくReact単体アプリに適する | Next.jsはサーバー機能が不要な初版には範囲が広すぎる |
-| localStorage | ブラウザー内の小さな保存領域 | 本人用データ | 無料、外部送信なし、サーバー不要 | PostgreSQL/SQLite+APIは複数端末同期が必要になるまで保留 |
-| Vitest | TypeScript向け自動テスト | 計算・保存・画面操作 | Viteと相性がよく高速 | Jestも有力だが設定重複を避ける |
-| Testing Library | 利用者の操作に近い画面テスト | 登録・検索など | 実装内部より表示と操作を確認できる | E2Eだけでは失敗原因の切り分けが遅い |
-| Playwright | 実ブラウザー相当の自動操作 | 主要フローと画像取得 | Webアプリ部分だけ安全に撮影できる | Windows全画面撮影は個人情報混入リスクがある |
-| ESLint | コード上の問題を検査 | lint | 書き間違いや不自然な記述を早期発見 | 手作業レビューだけでは再現性が低い |
-| Git | 変更履歴を残す | フェーズ単位のコミット | 差分と試行錯誤を説明できる | 履歴なしのファイル保存では開発過程が残らない |
+| 技術 | 用途 | v2で採用した理由 | 今回見送った代替 |
+|---|---|---|---|
+| React 19 | 既存UI、状態、画面 | 良好なUIと履歴を維持し、追加画面をcomponent化できる | 全面Next.js移行は公開SEOが主目的でない |
+| TypeScript 5 | domain/interface | Company/User/Fact/Storageの境界を開発時に検査 | JavaScriptだけでは多いmodelの取り違えが増える |
+| Vite 7 | dev/build | SPAとDrive RESTをブラウザーで扱え、既存構成を保てる | backend frameworkは定期処理をしない今回不要 |
+| Zod 4 | runtime validation | backup、AI、DriveはTypeScript型だけでは守れない | 手書きvalidationの重複を避ける |
+| pnpm 11 | 依存固定 | 既存lockfile/packageManagerを維持 | npmへの変更は履歴と再現性を崩す |
+| localStorage | 明示的dev、v1互換 | Google設定なしでMock/E2E可能 | productionの黙ったfallbackにはしない |
+| Google GIS Token model | browser認可境界 | backendなしSPA向けの現行公式手段 | deprecatedなgapi.auth2を採用しない |
+| Drive REST appDataFolder | 個人cloud正本候補 | 非表示のapp専用領域、`drive.appdata`限定 | Spreadsheet、中央DB、広いDrive scopeを使わない |
+| Vitest/Testing Library | domain/component | 移行、計算、UIを高速に分離検証 | E2Eだけでは原因特定が遅い |
+| Playwright + Edge | E2E/画像 | Windows既存ブラウザーで主要flowとWeb部分撮影 | desktop全体撮影は個人情報リスク |
+| 独自CSS | UI維持/モバイル | 現行デザインを保ち、追加依存を避ける | UI framework全面導入は不要 |
+| Git | 学習証跡 | 初版4commitを残し、v2をphase単位で追加 | squash/re-initは禁止 |
 
-## 無料・公式性
+## React/Viteを維持した判断
 
-React、TypeScript、Vite、Vitest、Playwright、ESLint、Gitは無償で利用できるオープンソースです。パッケージはnpm互換の管理機能から取得します。本作業ではCodexに同梱されたNode.jsを利用し、ユーザーPCへ追加課金サービスを導入しません。
+既存のDashboard、一覧、詳細、form、CSSが完成しており、今回の手動AI SyncとDrive RESTはSPAで実装できます。SEO向け公開企業ページも、browserを閉じた後の定期処理も今回の主目的ではありません。そのためframework移行より、Auth/Storage/Catalog/Watchと将来用AiProvider contractの境界へ時間を使いました。AiProviderの実装クラスや有料AI API呼出しは今回ありません。
 
-ユーザーが後から通常のターミナルで開発する場合に必要なのは、公式のNode.js LTS、既にあるGit、任意のVS Codeだけです。Docker、Python、DBサーバーは不要です。
+## Zodを1つ追加した理由
 
-## 過去案との差分
+型注釈はbuild時だけで、利用者が選んだJSONやDriveから来るJSONの中身を保証しません。Zodにより`parse → validate → preview → commit`を実装し、invalid inputで現データを変えないテストを書けます。依存を過剰に増やさず、この目的に必要な1つだけ追加しました。
 
-過去会話では React/TypeScript + FastAPI + PostgreSQL + Docker + Render が中難度案でした。これはフルスタック経験には有効ですが、最新条件では外部サービスの料金リスクと学習範囲を増やします。初版は保存境界を設計した単体アプリにし、将来APIへ置き換えられる構造をポートフォリオ上の判断として説明します。
+## 無料・課金方針
 
+React等はOSSです。今回Billing、カード、有料hosting、有料DB、有料AI APIは使いません。Google Drive APIは標準利用が現時点で追加費用なしと公式案内されていますが、quota超過課金方針は変更され得ます。設定時に公式情報を再確認し、Billing accountを紐付けず、要求されたら作業を止めます。
+
+## 開発環境で実際に起きたこと
+
+ZIP由来の`node_modules`はpnpm link/ACLを信用せず、lockfileから再構築しました。Codex shellでNodeが通常PATHに見えない場面は、同梱の公式ワークスペースNode実行ファイルからCLIを直接起動して検証しました。これはアプリのbugではなく実行環境差です。
+
+## 将来の再評価条件
+
+- Gmail/採用Webの定期監視: backend、scheduler、OAuth審査を追加検討。
+- 一般企業検索/SEOが中心: SSG/SSR/Next.jsまたは別public frontendを検討。
+- 複雑な共有編集: server DBと原子的な競合制御を検討。
+
+それまではFastAPI、PostgreSQL、Docker、Kubernetes、Redis、AWS、Firebase central DB、microservicesを追加しません。

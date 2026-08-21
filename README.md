@@ -1,77 +1,91 @@
-# Job Hunt Manager
+# Job Hunt Manager v2
 
-企業・応募条件・選考予定・締切・評価を1か所で管理し、「次に何をするか」を見つけやすくする個人用Webアプリです。
+応募・検討している企業を登録した後、選考、締切、企業評価、採用情報の変化を一元管理し、「次に何をするか」を判断しやすくする個人用Webアプリです。実用品、就活ポートフォリオ、Web開発初心者の学習証跡を同じ重さで作っています。
 
-![ダッシュボード](docs/portfolio/screenshots/dashboard.png)
+![v2ダッシュボード](docs/portfolio/screenshots/v2-dashboard.png)
 
-## 解決したかった課題
+画像と同梱デモは完全な架空データです。実企業、実応募状況、実メール、担当者情報は含みません。
 
-就活では、企業情報、応募資格、テスト形式、ES締切、面接予定、志望度が別々のページやメモへ分散します。応募先が増えるほど、比較と期限管理が難しくなります。
+## まず使う
 
-このアプリでは、次の流れを1つにしました。
-
-```text
-企業を登録 → 応募条件を比較 → 選考予定を追加 → 締切を確認 → 検索・絞り込み → 次の行動を決める
-```
-
-## 主な機能
-
-- 企業の登録・表示・編集・確認付き削除（CRUD）
-- 新卒・既卒・職歴あり応募資格、Webテスト、コーディングテストの管理
-- 給与、福利厚生、WLB、リモート、フレックス、海外可能性、IT/DX一致の評価
-- 志望度を含む100点満点の総合点とランキング
-- 1社に複数のES、テスト、面接、締切を登録
-- 選考ステータス、期限超過、7日以内の警告
-- キーワード検索、4軸フィルター、4種類の並び替え
-- 件数、直近予定、状態、ランキングのダッシュボード
-- 本人用localStorageと公開デモデータの分離
-- 検証付きJSONバックアップ
-- PC・スマートフォン幅に対応
-
-## 画面
-
-| 企業一覧 | 企業詳細・選考 |
-|---|---|
-| ![企業一覧](docs/portfolio/screenshots/company-list.png) | ![企業詳細](docs/portfolio/screenshots/company-detail.png) |
-
-| スマートフォン幅 |
-|---|
-| ![スマートフォン](docs/portfolio/screenshots/mobile-dashboard.png) |
-
-画像・デモデータはすべて架空です。実際の応募状況や面接情報は含みません。
-
-## 技術
-
-- React 19 / TypeScript 5 / Vite 7
-- localStorage / JSON
-- Vitest / Testing Library
-- Playwright（既存Microsoft Edgeを使用）
-- ESLint / Git
-
-初版は1人・1ブラウザー用なので、バックエンド、外部DB、Docker、クラウドを入れていません。外部送信と料金をゼロにし、保存処理を分離して将来APIへ置き換えられる構造にしました。詳細は [技術選定](docs/03_TECH_STACK.md) を参照してください。
-
-## システム構成
-
-```mermaid
-flowchart LR
-  U[利用者] --> R[React画面]
-  R --> C[検索・集計・入力検証]
-  C --> L[(本人用 localStorage)]
-  R --> D[公開デモの架空データ]
-```
-
-## Windowsでの起動方法
-
-必要なのは無料の公式Node.js LTSとGitです。Docker、Python、DBサーバーは不要です。
+Windowsで無料の公式Node.js LTSを入れ、PowerShellでこのフォルダーを開きます。Docker、Python、DBは不要です。
 
 ```powershell
 corepack enable
 corepack prepare pnpm@11.19.0 --activate
-pnpm install
+pnpm install --frozen-lockfile
 pnpm run dev
 ```
 
-表示された `http://localhost:5173` をEdgeまたはChromeで開きます。Corepackがない場合だけ、Node.js同梱のnpmで `npm install --global pnpm@11.19.0` を実行してから同じ手順へ進みます。
+表示された `http://localhost:5173` をEdgeまたはChromeで開きます。画面右上のモードを選びます。
+
+- `公開デモ`: 架空の4社で全画面を試す。再読み込みで初期状態へ戻る。
+- `本人用`: 開発時は「ローカル開発モード」と明示してlocalStorageへ保存する。
+- Google設定後の本人用: Googleログイン後、Driveの非表示領域 `appDataFolder` を保存先にする。
+
+基本操作は「企業・選考管理 → 企業を登録 → 企業カード → 選考予定やResearch Factを追加」です。評価項目は「評価設定」、ChatGPT等からの候補は「AI同期」、承認した変化は「Watch」で管理します。詳しい手順は [はじめに読む資料](docs/00_START_HERE.md) にあります。
+
+## v2でできること
+
+- User CompanyとCompany Masterを分離し、名称変更に影響されない恒久IDで任意に紐付け
+- 企業CRUD、選考イベントCRUD、ステータス、締切、面接、メモ
+- 企業名・職種・メモ・Research Fact検索、複合フィルター、4種類の並び替え
+- 項目名、説明、最大点、weight、有効/無効、順序を変更できるScoring Profile
+- 未評価を0点にしない暫定スコアと評価充足率
+- 値、出典、確認日、対象年度、確認レベル、AI整理有無を分けるResearch Fact
+- Zodで検証するAI Sync JSON、差分preview、個別選択、追加確認後の反映
+- fingerprintで重複を防ぎ、確認・完了・非表示を管理するWatch Center
+- 期限緊急度と企業適合度を混同しない「今日の要対応」
+- schemaVersion 2 JSONバックアップ、v1 import/migration互換、元v1の保持
+- 保存先をUIから分けるStorageRepository
+- GIS Token model用AuthProviderとGoogle Drive `appDataFolder` repository
+- 公開デモと本人用データの分離、PC/スマートフォン幅対応
+
+## データ構造
+
+```mermaid
+flowchart LR
+  UI[React UI] --> UC[User Company]
+  UC --> MC[Company Master]
+  UC --> EV[Selection Event]
+  UC --> CE[Company Evaluation]
+  SP[Scoring Profile] --> CE
+  UC --> RF[Research Fact + Source]
+  UC --> WF[Watch Finding]
+  UI --> SR[StorageRepository]
+  SR --> LS[(Local Development)]
+  SR --> GD[(Google Drive appDataFolder)]
+```
+
+Company Masterへの紐付け候補は表示しますが、表記ゆれだけで自動統合しません。ランキングは評価済み項目だけで計算し、充足率100%未満は「暫定」です。
+
+## Google連携の現在地
+
+コードとMock/contractテストは実装済みです。要求scopeは `openid email profile` と `https://www.googleapis.com/auth/drive.appdata` だけで、Gmail scopeはありません。access tokenはメモリだけで扱います。
+
+実GoogleアカウントでのOAuth/Drive接続は未実施です。Client ID作成、本人ログイン、2FAは利用者本人だけが行います。Billing、カード、課金trialは使いません。設定する場合は [Google認証セットアップ](docs/GOOGLE_AUTH_SETUP.md) を読み、実施時点の公式料金と画面を再確認してください。
+
+## AI SyncとWatchの境界
+
+現在の運用は次です。
+
+```text
+ChatGPT等で調査 → AiSyncEnvelopeV1 JSON → validation → 差分preview
+→ 利用者が個別承認 → Research Fact / Selection Event / Watch Findingへ保存
+```
+
+AI出力を読み込んだだけでは本データを変更しません。Gmail自動監視、Web定期巡回、有料AI API、バックグラウンドschedulerは未実装です。仕様は [AI Sync format](docs/09_AI_SYNC_FORMAT.md) と [Watch構成](docs/10_WATCH_ARCHITECTURE.md) にあります。
+
+## 技術
+
+- React 19 / TypeScript 5 / Vite 7 / pnpm 11
+- Zod 4による外部JSONのruntime validation
+- localStorage（明示的な開発モード）/ Google Drive REST境界
+- Google Identity Services Token model境界
+- Vitest / Testing Library / Playwright / ESLint / Git
+- 独自CSS（UI frameworkなし）
+
+React/Viteを維持し、FastAPI、PostgreSQL、Docker、Next.js、Firebase、有料APIは追加していません。今回の手動同期にはバックエンドが不要で、既存UIと履歴を守る費用対効果が高いためです。
 
 ## 品質確認
 
@@ -82,45 +96,36 @@ pnpm run test
 pnpm run test:e2e
 ```
 
-開発時の最終結果は、lint成功、build成功、18件のunit/componentテスト成功、3件のEdge E2E成功です。E2Eは登録、検索、詳細、保存、再読み込み、削除を含みます。
+2026-08-21の最終確認:
 
-## データと安全性
+- TypeScript: 成功
+- ESLint: 成功
+- production build: 成功
+- unit/component: 119件成功（24ファイル）
+- Microsoft Edge E2E: 機能フロー6件＋証跡撮影2件、計8件成功
+- Google Auth/Drive: Mock/contractまで成功、実Googleアカウント未試験
 
-- 公開デモは完全な架空データで、再読み込みすると初期状態へ戻ります。
-- 本人用はブラウザーのlocalStorageだけへ保存し、Gitや外部へ自動送信しません。
-- localStorageは暗号化保管庫ではありません。共有PCでは本人用モードを使わないでください。
-- パスワード、Cookie、APIキー、担当者連絡先は入力しないでください。
-- バックアップJSONは自分で安全な場所へ保管してください。
+## 安全性
 
-## 工夫した点
+- `.env`、token、password、Cookie、API key、個人データはGitへ入れない。
+- URLはhttp/httpsだけを受け付け、HTML文字列を直接挿入しない。
+- invalid JSONは現在データを変更しない。
+- v1移行前に原文を別keyへ退避し、旧keyも即削除しない。
+- Drive保存前にremoteのversionとAppData revisionを再確認し、差分時は自動上書きを止める。
+- Drive v3で原子的なETag条件更新を公式保証として確認できていないため、再確認からPATCHまでの競合窓は既知の限界として文書化する。
+- Windowsデスクトップ全体を撮影せず、Webアプリだけを架空データで撮影する。
 
-- 要件の出典を「明示的に決定済み」と「AI補完」に分けた。
-- 企業と選考予定を1対多にし、ES・テスト・面接を同じ形で扱った。
-- 保存データを変えずに検索・ランキング・締切警告を派生計算した。
-- 実ブラウザーで `crypto.randomUUID()` の接続環境差を発見し、機能検出付きID生成へ修正した。
-- 公開デモと本人用を見た目だけでなくデータ経路でも分けた。
-- 各フェーズに画像、エラー、復習、面接用説明、理解度チェックを残した。
+## 学習・ポートフォリオ資料
 
-## AIの利用
-
-このプロジェクトはAI協働開発です。ユーザーが目的・必須機能・安全条件・証跡要件を決め、Codexが過去仕様の復元、設計提案、実装、テスト、修正、文書初稿を支援しました。人間だけで全コードを書いたとは説明しません。詳細は [AI利用記録](docs/06_AI_USAGE.md) と [面接用AI説明](docs/portfolio/AI_USAGE_FOR_INTERVIEW.md) に記録しています。
-
-## ドキュメント
-
-- 初めて読む: [docs/00_START_HERE.md](docs/00_START_HERE.md)
-- 要件: [docs/01_REQUIREMENTS.md](docs/01_REQUIREMENTS.md)
-- 構成: [docs/02_ARCHITECTURE.md](docs/02_ARCHITECTURE.md)
-- 開発証跡: [docs/evidence/INDEX.md](docs/evidence/INDEX.md)
-- ポートフォリオ要約: [docs/portfolio/PORTFOLIO_SUMMARY.md](docs/portfolio/PORTFOLIO_SUMMARY.md)
-- 面接準備: [docs/portfolio/INTERVIEW_GUIDE.md](docs/portfolio/INTERVIEW_GUIDE.md)
-
-## 今後の改善候補
-
-- 評価ウェイトを本人が変更できる設定
-- CSV入出力とカレンダー表示
-- 本人の同意と安全設計を前提にした通知
-- 複数端末が必要になった場合のAPI・DB移行
+- [読む順番](docs/00_START_HERE.md)
+- [要件](docs/01_REQUIREMENTS.md)
+- [構成](docs/02_ARCHITECTURE.md)
+- [v2データモデル](docs/07_DATA_MODEL_V2.md)
+- [開発証跡 Phase 0〜17](docs/evidence/INDEX.md)
+- [ポートフォリオ要約](docs/portfolio/PORTFOLIO_SUMMARY.md)
+- [面接ガイド](docs/portfolio/INTERVIEW_GUIDE.md)
+- [AI利用記録](docs/06_AI_USAGE.md)
 
 ## 公開方針
 
-料金が発生する可能性を避けるため、今回はローカル実行とGitHub掲載可能な成果物までです。外部公開・外部DB・課金APIは使用していません。ライセンスは未選択のため、公開前にユーザー本人が利用方針を決める必要があります。
+今回はローカル実行とGitHub掲載可能な状態までです。外部公開、GitHub push、OAuth本番設定、Billingは行っていません。ライセンス、公開範囲、法的文書は利用者本人が確認してから決定します。

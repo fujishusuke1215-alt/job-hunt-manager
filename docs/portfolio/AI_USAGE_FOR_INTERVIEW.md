@@ -1,39 +1,49 @@
-# 面接でのAI利用説明
+# 面接でのAI利用説明 v2
 
 ## 30秒版
 
-「要件・必須機能・安全条件は自分で提示し、Codexを仕様復元、実装、テスト、文書化の支援に使いました。生成結果をそのまま成果とせず、型・データの流れ・Git差分・18件のテストと3件のE2Eで確認し、AIが補った判断も別記しました。」
+「自分の就活管理課題、必須機能、安全・無課金条件は私が定義し、Codexを設計レビュー、実装、テスト、文書作成に使いました。生成物をそのまま採用せず、要件対応、Zod検証、Git差分、119件のunit/componentと6件の機能E2E＋2件の撮影テストで確認しました。AI Sync自体も候補を即反映せず、人が差分を承認する設計です。Google実接続など未確認範囲も明記しています。」
 
-## 誰が何をしたか
+## ユーザーが担ったこと
 
-### ユーザー
+- 実際の約50社管理というproblem definition。
+- v1で感じた課題とv2の詳細Acceptance Criteria。
+- Company Master、dynamic scoring、Research Fact、AI Watch、Driveという方向。
+- 個人情報、Gmail scope、課金、外部公開の禁止。
+- 既存UI/Git/evidenceを守り、学習証跡を同じ重さにする判断。
 
-- 実用品、ポートフォリオ、学習証跡を同等にする目的
-- 必須機能と評価項目
-- 無課金、個人情報禁止、ダミーデータ、Git、証跡の条件
-- 過去会話を優先する判断
+## Codexが担ったこと
 
-### AI/Codex
+- 既存コードとGitの監査、risk整理。
+- domain/repository/providerの具体設計。
+- code、test、CSS、docsの初稿と修正。
+- Google公式資料の確認、command実行、error analysis、再試験。
+- 架空データだけのscreenshotとsecurity audit。
 
-- 過去会話からの仕様抽出と明示/補完の分類
-- localStorage構成と将来拡張境界の提案
-- コード、テスト、CSS、文書の初稿
-- コマンド実行、エラー調査、修正、再テスト
-- 安全なスクリーンショットと監査
+## 人が確認できる証拠
 
-### ユーザーが今後行うこと
+- `git log --oneline`: 初版4commitを残した段階的v2履歴。
+- `docs/evidence/phase-11-*`以降: 変更前後、error、復習、30秒説明。
+- `src/domain/*.test.ts`: 計算、migration、AI/Watchの期待値。
+- `src/repositories/*.test.ts`: 実accountなしのLocal/Drive storage contract。
+- `src/providers/*.test.ts`: Auth scope、login、logout、account switchのcontract。
+- `e2e/core-flow.spec.ts`: user flow。
+- `docs/06_AI_USAGE.md`: 実装/確認/未確認の区別。
 
-- 本人用モードを自分で操作する
-- 各Phaseの理解度チェックへ答える
-- コードと資料を読み、説明を自分の言葉へ直す
-- GitHub公開・ライセンスを本人判断する
+## 誇張しない
 
-## 誇張しない言い方
+- 言える: 「AIを使って実装し、自分の要件とtestで検証した」。
+- 言える: 「Google用code/Mockは完成、実account試験は未実施」。
+- 言えない: 「全部一人で手書きした」。
+- 言えない: 「Gmailを毎朝自動監視できる」。
+- 言えない: 「Drive競合が原子的に完全解決した」。
 
-- 良い: 「AIを使って実装し、要件対応とテスト結果を確認した」
-- 避ける: 「全部自分だけでゼロから手書きした」
-- 避ける: 「AIが作ったので中身は分からない」
+## 深掘りに備える5問
 
-## 深掘りされたら
+1. なぜUser CompanyとMasterを分けたか。
+2. なぜ未評価を0点にしないか。
+3. AI JSONをどうtransaction的に扱うか。
+4. Drive conflictをどこまで防ぎ、何が限界か。
+5. AIが書いたcodeをどう検証したか。
 
-自分で説明する中心は、Company/SelectionEventの関係、localStorage保存、総合点、公開デモ分離、randomUUIDバグ、3層のテストです。分からない実装詳細は推測せず、「資料を使って確認し直す」と答えます。
+答えられない詳細は推測せず、test、official docs、source codeで確認し直すと答えます。

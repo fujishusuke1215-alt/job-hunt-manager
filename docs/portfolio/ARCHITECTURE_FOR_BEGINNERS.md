@@ -1,55 +1,85 @@
-# 初心者向け構成説明
+# 初心者向けv2構成説明
 
-## 画面で登録したとき何が起きるか
+## 一番大きな変更
+
+初版のCompanyは「企業そのもの」と「自分の応募」を1つに入れていました。v2は分けます。
 
 ```text
-入力欄へ企業名を書く
-  ↓
-CompanyForm が必須項目を確認
-  ↓
-App が Company という1社分のデータを作る
-  ↓
-本人用なら storage がJSON文字列に変換
-  ↓
-ブラウザーのlocalStorageへ保存
-  ↓
-CompanyList と Dashboard が同じデータから再表示
+Company Master（企業そのもの・恒久ID）
+        ↑ 任意にlink
+User Company（応募職種、状態、志望度、メモ、選考）
+        ├─ Selection Event
+        ├─ Company Evaluation
+        ├─ Research Fact + Source
+        └─ Watch Finding
 ```
+
+名前が変わってもMaster IDは変わりません。候補が曖昧なら自動で結びません。Masterがなくても独自企業として使えます。
+
+## 登録から保存
+
+```text
+CompanyFormをsubmit
+→ AppがUser CompanyとEvaluationを更新
+→ revisionを増やす
+→ StorageRepository.save
+→ LocalまたはDrive実装がZodで検証
+→ 競合確認
+→ JSON保存
+→ sync status表示
+```
+
+formへ文字を1文字入力するたびにDriveへ送るのではなく、登録ボタン等の明示操作だけで保存します。
+
+## 評価計算
+
+Criterionごとに`score / scaleMax`で0〜1へ揃え、weightを掛けます。未評価は0点ではなく計算対象外です。全weightのうち評価済みweightが何%かをcoverageとして表示します。
+
+```text
+score 4 / max 5、weight 20 → 0.8 × 20
+```
+
+評価済みweightだけで暫定100点換算し、coverageが100%未満なら「暫定」と表示します。
+
+## AI Sync
+
+```text
+JSONを貼る
+→ Zod validation
+→ Master/User Company候補照合
+→ before / afterを表示
+→ 利用者が項目を選ぶ
+→ deleteは追加確認
+→ revisionが変わっていない時だけcommit
+```
+
+AIの答えを一次情報にはしません。公式ページをAIが整理した場合、sourceは`official_web`、`processedByAi=true`と別々に保存します。
+
+## 保存先を分ける理由
+
+UIは`StorageRepository`の`load/save`だけを知ります。localStorageとDriveの違いはrepository内部へ閉じ込めるため、Mockへ差し替えてGoogle accountなしでもtestできます。
 
 ## 主なファイル
 
-| ファイル | 一言でいうと |
+| ファイル | 役割 |
 |---|---|
-| `src/types.ts` | データの設計図 |
-| `src/App.tsx` | 操作とデータをつなぐ司令塔 |
-| `src/components/CompanyForm.tsx` | 企業の入力・編集画面 |
-| `src/components/CompanyDetail.tsx` | 企業詳細と選考予定CRUD |
-| `src/services/storage.ts` | 保存・復元・バックアップ検証 |
-| `src/utils/scoring.ts` | 100点の計算 |
-| `src/utils/deadlines.ts` | 締切までの日数 |
-| `src/utils/companyFilters.ts` | 検索・絞り込み・並び替え |
+| `src/domain/types.ts` | AppDataV2の設計図 |
+| `src/domain/migration.ts` | v1を失わずv2へ変換 |
+| `src/domain/scoring.ts` | score/coverage |
+| `src/domain/companyMatching.ts` | Master候補、canonical解決 |
+| `src/domain/aiSync.ts` | validation、preview、commit |
+| `src/domain/watch.ts` | dedupと今日対応rule |
+| `src/repositories/types.ts` | 保存先の共通契約 |
+| `src/repositories/googleDriveStorage.ts` | appDataFolderと競合停止 |
+| `src/providers/googleAuth.ts` | GIS tokenとaccount表示 |
+| `src/App.tsx` | 画面、mode、save queueの接続 |
 
-## CompanyとSelectionEvent
+## まず説明できればよい7点
 
-Companyは1社分、SelectionEventは1つのES・テスト・面接です。Companyの中に `events: SelectionEvent[]` があるため、1社が何件でも予定を持てます。
-
-## 状態と保存値
-
-Reactのstateは、今画面で使うデータです。本人用モードではstateが変わるたびlocalStorageへ保存します。検索語や開いている画面は一時的な状態なので企業データへ保存しません。
-
-## ダッシュボードは別データではない
-
-登録企業数、状態別件数、直近締切、ランキングはCompany配列から毎回計算します。同じ値を二重保存しないため、更新忘れによる矛盾を減らせます。
-
-## なぜAPIとDBがないか
-
-APIはブラウザーとサーバーの受付、DBはサーバー側の保存庫です。複数端末・複数利用者には有効ですが、初版の1人・1ブラウザーには必須ではありません。今回は保存を `storage.ts` に隔離したため、将来必要になったらここをAPI呼び出しへ置き換えられます。
-
-## まず説明できればよい5点
-
-1. Reactが画面、TypeScriptがデータ形を担当する。
-2. Companyが複数SelectionEventを持つ。
-3. Appが状態を持ち、部品へ渡す。
-4. 本人用だけlocalStorageへ保存する。
-5. 検索とダッシュボードは保存値から都度計算する。
-
+1. MasterとUser Companyは何が違うか。
+2. 未評価を0点にしない理由。
+3. Source metadataが必要な理由。
+4. AI Syncが即時反映しない理由。
+5. Watch Findingをfingerprintで重複防止する理由。
+6. UIから保存先を分ける理由。
+7. Google実試験とMock試験を区別する理由。

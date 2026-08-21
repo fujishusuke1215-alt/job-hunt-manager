@@ -68,7 +68,7 @@ UIはDrive APIを直接呼びません。初期実装は`LocalDevelopmentStorage
 
 ## 保存単位と再試行
 
-フォーム入力中のキーごとには保存しません。企業・予定・評価・AI承認など、確定操作後のAppData変更を短いdebounceと直列write queueで保存します。
+フォーム入力中のキーごとには保存しません。企業・予定・評価・AI承認など、確定操作後のAppData変更だけを直列write queueで保存します。現在はdebounceを追加せず、submit単位に絞ることでDrive呼出しを抑えています。
 
 一時的な403理由、429、500、502、503、504だけを、jitter付きtruncated exponential backoffで有限回再試行します。401、権限不足、validation failureは自動再試行しません。
 
@@ -100,4 +100,3 @@ Drive API v3のFile resourceには`version`、`modifiedTime`等があります�
 ## 料金方針
 
 Google公式では標準利用に追加費用なしと説明されていますが、2026年後半のquota超過課金予定も案内されています。Billing accountを接続せず、カード登録、quota引上げ、trialを行いません。設定時には[最新の公式limits/pricing](https://developers.google.com/workspace/drive/api/guides/limits)を本人が再確認します。
-

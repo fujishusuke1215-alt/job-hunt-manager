@@ -15,3 +15,12 @@
 | 8 UI/UX | PCと狭い画面で情報を読めるようにする | 390px幅、下部ナビ、警告色、ARIA | `styles.css`, `AppShell.tsx` | 短縮ラベルのアクセシブル名をARIAで補完 |
 | 9 テスト | 必須機能と回帰を確認 | lint/build成功、18 unit/component、3 E2E成功 | `src/*.test.*`, `e2e/` | VitestがE2Eも読んだため探索範囲を分離 |
 | 10 リリース準備 | GitHub・面接・学習の入口を作る | README、5ポートフォリオ資料、最終監査 | `README.md`, `docs/portfolio/`, `FINAL_AUDIT.md` | 課金可能性を避け、外部公開せずローカル成果物で完了 |
+| 11 v2データモデル | 企業情報と本人情報を分離 | schema v2、v1非破壊migration、Research Fact | `src/domain/types.ts`, `migration.ts` | 型一括置換を避け、旧型を互換層として残し段階移行 |
+| 12 動的評価 | 固定weightを廃止 | profile/criterion、暫定score、coverage、比例変換 | `scoring.ts`, `profileManagement.ts`, `ScoringSettings.tsx` | 未評価を0点にせず評価済みweightだけで計算 |
+| 13 Company Master | 名称を主キーにしない | 恒久ID、alias/domain候補、custom/link | `companyMatching.ts`, `catalogData.ts` | 曖昧候補の自動mergeを禁止 |
+| 14 AI Sync / Watch | ChatGPT調査結果を安全に扱う | Zod、diff preview、個別承認、dedup、Watch Center | `aiSync.ts`, `watch.ts`, `AiSync.tsx` | AI読込即反映をtransaction flowへ変更 |
+| 15 Auth / Drive | 複数端末用の保存境界を作る | GIS Token model、appDataFolder、version+revision競合停止 | `googleAuth.ts`, `googleDriveStorage.ts` | 本人認証はせずMock/contract 28件まで確認 |
+| 16 v2テスト | 回帰とAcceptance Criteriaを確認 | unit/component 119件、Edge機能E2E 6件、lint/type/build成功 | `src/**/*.test.*`, `e2e/core-flow.spec.ts` | selector重複をrole指定へ修正、Node PATH差は同梱Nodeで実行 |
+| 17 v2リリース監査 | テスト、docs、画像、security、Gitを整合 | Edge機能E2E 6件＋撮影2件、Phase 11〜17、portfolio、最終監査 | `README.md`, `docs/`, `e2e/screenshots.spec.ts` | 過去画像を保護し、新Phaseだけへ架空データを撮影 |
+
+Phase 0〜10は初版として歴史を保持しています。Phase 11以降が、実際に使って見えた「複数端末、企業表記、固定ランキング、情報源、AI差分」の課題へ対応したv2です。

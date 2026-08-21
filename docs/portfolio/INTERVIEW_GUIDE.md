@@ -1,81 +1,133 @@
-# 面接ガイド
+# Job Hunt Manager v2 面接ガイド
 
 ## 30秒説明
 
-「複数企業の応募条件、選考予定、締切、評価が分散する課題から、ReactとTypeScriptで就活管理Webアプリを作りました。企業CRUD、1社対複数予定、検索、ランキング、ブラウザー保存を実装し、公開デモと本人用を分離しました。18件の自動テストと3件のEdge E2Eを行い、実ブラウザーで見つけたID生成の環境差も修正しました。」
+「約50社の選考・締切・評価・採用情報変化が分散する課題から、React/TypeScriptで就活管理アプリを作りました。初版のlocalStorage単一Companyを実運用視点で見直し、Company Masterと本人情報の分離、自由な評価項目、根拠付きFact、AI差分承認、Google Drive保存境界へ発展させました。119件のunit/componentと6件のEdge機能E2E＋2件の撮影テストで確認し、Google実接続だけは未試験と明記しています。」
 
 ## 1分説明
 
-「自分が今後数か月使える実用品を主目的に、企業、既卒・職歴あり応募資格、Web/コーディングテスト、ES・面接、締切、志望度を一元管理するアプリを作りました。React/TypeScriptを使い、1社が複数のSelectionEventを持つデータ設計です。初版は1人用なので外部DBやクラウドを入れず、本人用はlocalStorage、採用担当者向けデモは架空データに分離しました。検索・4軸フィルター・重み付き100点・期限警告を実装し、lint、build、18 unit/component、3 Edge E2Eで確認しました。AI協働開発であることも役割別に記録しています。」
+「中心機能は企業検索ではなく、応募企業を登録した後の継続管理です。企業CRUD、複数選考、締切、検索、Dashboardに加え、v2では企業そのものを恒久IDのMaster、応募状況をUser Companyへ分けました。評価は固定weightをやめ、項目、最大点、weightを変更でき、未評価を0点にせず暫定scoreとcoverageを表示します。採用情報はSource、確認日、年度、確認level付きFactです。ChatGPT等の結果はZodで検証し、差分previewと人の承認後だけWatchへ反映します。保存はrepositoryへ分離し、LocalとGoogle Drive appDataFolderを差し替えられます。Gmail自動監視や有料APIは未実装です。」
 
-## 3分説明
+## 変更前と変更後を図で説明
 
-「開発の出発点は、応募先が増えると、応募資格・テスト・締切・面接・評価が複数のページやメモへ分散し、次の行動が見えにくくなることでした。同時に、私には数値計算や業務システム経験はあっても、普通のWebサービスを要件からテストまで作った経験が不足していました。
+```text
+v1: Company { 企業名 + 応募 + 採用情報 + 固定scores + events }
 
-そこで過去会話の要望を復元し、企業CRUD、1社対複数選考、検索、ダッシュボード、本人用と公開デモ分離を必須にしました。React/TypeScriptを選びましたが、FastAPI、PostgreSQL、Dockerは初版から外しました。1人・1ブラウザー用にはlocalStorageで要件を満たせ、課金・個人情報・運用の範囲を増やさないためです。ただし保存処理をサービスへ分け、将来APIへ交換できるようにしました。
+v2: Master Company ← User Company → Selection Event
+                         ├→ Evaluation ← Scoring Profile
+                         ├→ Research Fact → Source
+                         └→ Watch Finding
+                         ↓
+                  StorageRepository
+                    ├ Local dev
+                    └ Drive appDataFolder
+```
 
-実装ではCompanyがSelectionEvent配列を持ち、検索やランキングは元データから都度計算します。評価は給与・福利厚生20%、WLB25%などの重みで100点換算します。公開デモは完全な架空企業、本人用だけlocalStorageへ保存し、schemaVersion付きJSONでバックアップできます。
+## 想定質問
 
-テストはロジックと保存を単体、画面操作をTesting Library、登録・再読み込み・削除をEdge E2Eで確認しました。実ブラウザーのLAN内HTTPではcrypto.randomUUIDが使えないバグを見つけ、機能検出付きcreateIdへ直しました。AIは実装支援に使いましたが、ユーザー決定とAI補完を分け、エラー、Git履歴、理解度チェックまで残しています。」
+### 1. なぜ作りましたか
 
-## 想定質問と回答
+約50社では情報と締切が散らばり、次の対応判断が難しいためです。成果物だけでなく自分が継続利用する道具にしました。
 
-### 1. なぜこのアプリを作りましたか
-実際の就活で企業情報と締切が分散する課題を解き、同時にWebサービス開発経験を補うためです。
+### 2. なぜv2へ改修しましたか
 
-### 2. なぜReactですか
-検索、モード、フォーム、一覧など状態による画面変化が多く、部品分割とテストがしやすいためです。
+初版を1人用として完成させた後、企業/本人情報混在、固定ランキング、出典なし、複数端末、AI結果転記が次の課題だと分かったためです。
 
-### 3. なぜTypeScriptですか
-Companyの項目が多く、文字列・点数・選択肢を取り違える問題をbuild時に見つけやすいためです。
+### 3. なぜReact/Viteを維持しましたか
 
-### 4. なぜNext.jsではありませんか
-初版にサーバーレンダリングやサーバー機能がなく、React+Viteの方が構成を小さく説明しやすいためです。
+既存UIが動き、手動AI SyncとDrive RESTはSPAで成立します。SEO/SSRや定期backend処理が今回不要なので、境界改善の価値が高いと判断しました。
 
-### 5. なぜバックエンドやDBがありませんか
-1人・1ブラウザー用にはlocalStorageで要件を満たし、無課金、外部送信なし、学習範囲の集中を優先したためです。
+### 4. Company Masterとは何ですか
 
-### 6. 将来APIへ移せますか
-保存・復元を `storage.ts` に分けているため、この境界をAPI呼び出しへ交換する方針です。
+名称変更に影響されない恒久IDを持つ企業そのものです。本人の選考やmemoはUser Companyへ置きます。
 
-### 7. データ設計を説明してください
-Companyが企業情報と `SelectionEvent[]` を持つ1対多です。各予定は種別、日時、状態、場所、メモを持ちます。
+### 5. 企業名を自動mergeしない理由は
 
-### 8. 総合点はどう計算しますか
-給与・福利厚生20%、WLB25%、リモート・フレックス15%、海外10%、IT/DX一致15%、志望度15%を5点評価から100点へ換算します。
+表記が似ても別会社の可能性があり、誤mergeすると選考データを別企業へ結びます。正規化は候補提示だけに使います。
 
-### 9. ダッシュボードの数値は保存しますか
-保存しません。Company配列から都度計算し、二重保存による矛盾を避けます。
+### 6. scoringを説明してください
 
-### 10. 一番苦労した点は何ですか
-単体テストで通った企業登録がLAN内HTTPの実ブラウザーで停止したことです。randomUUIDの利用条件を特定しました。
+各criterionを`score/scaleMax`で正規化しweightを掛け、評価済みweightだけで100点換算します。coverageは評価済みweight/全有効weightです。
 
-### 11. そのバグをどう直しましたか
-APIの有無を確認する `createId()` を作り、使えない場合は時刻と乱数の代替IDにしました。同じ登録操作を再実行しました。
+### 7. 未評価を0点にしない理由は
 
-### 12. どんなテストをしましたか
-点数・締切・検索・保存を単体、登録・予定追加・状態変更をコンポーネント、検索・保存・再読込・削除をE2Eで確認しました。
+「悪い」と「まだ調べていない」は違うからです。0点扱いは情報不足企業を不当に下げます。
 
-### 13. VitestとPlaywrightの役割は何ですか
-Vitestは小さな処理と画面を速く確認し、Playwrightは実Edgeでアプリ全体の流れを確認します。
+### 8. scaleMax変更時は
 
-### 14. テストで起きた問題は何ですか
-VitestがE2Eのspecまで読みました。Vitest対象をsrc配下のtestファイルへ限定して分離しました。
+IDを維持し、4/5なら8/10のように百分率を保って既存値を比例変換し、範囲へclampします。UIで確認も出します。
 
-### 15. 個人情報をどう守りましたか
-リポジトリ・テスト・画像は架空データだけにし、デモと本人用の保存経路を分け、秘密情報パターンも監査します。
+### 9. Research Factが必要な理由は
 
-### 16. localStorageの弱点は何ですか
-端末とブラウザーに依存し、暗号化保管庫ではなく、容量や複数端末同期にも限界があります。
+「Webテスト=○○」という値だけでは、いつ・何年度・どの出典か判断できません。source metadataと確認levelを一緒にします。
 
-### 17. UIで工夫した点は何ですか
-締切が近い/超過を色と文言で示し、次の行動を上部へ置き、390px幅では1列と下部ナビへ変えました。
+### 10. AIを一次情報にしますか
 
-### 18. AIはどこに使いましたか
-仕様復元、設計提案、コード、テスト、エラー調査、文書初稿に使いました。ユーザー決定とAI補完は資料で分離しました。
+しません。公式ページをAIが整理した場合もevidenceはofficial_web、processedByAiを別fieldにします。
 
-### 19. 自分で理解している範囲はどこですか
-要件、CompanyとSelectionEvent、状態と保存の流れ、検索・点数計算、テストの役割、主要エラー修正です。ユーザー本人は今後チェック問題で定着させます。
+### 11. AI Syncを安全にした方法は
 
-### 20. 次に改善するなら何ですか
-実運用後の要望を基に評価ウェイト編集とカレンダーを優先し、複数端末が必要になった時点でAPI/DBを検討します。
+parse、Zod validation、企業照合、diff preview、個別選択、delete追加確認、revision再確認、commitの順です。
+
+### 12. 重複をどう防ぎますか
+
+AI operationはoperationId、Watch Findingは企業+fingerprintで重複を防ぎます。completedは同じ再取込でnewへ戻しません。
+
+### 13. 今日の対応順はAIですか
+
+いいえ。期限超過、24時間、3日、7日、severity、同条件でscoreという透明なruleです。適合度ランキングとは別です。
+
+### 14. StorageRepositoryの利点は
+
+UIはload/saveだけを知り、Local/Drive/Mockを差し替えられます。外部APIなしでも同じcontractをtestできます。
+
+### 15. Drive scopeは
+
+`drive.appdata`だけです。identityはopenid/email/profile。広いDriveやGmail scopeは要求しません。
+
+### 16. tokenをどう扱いますか
+
+React/browser memoryだけで、localStorage/sessionStorage/IndexedDBへ永続化しません。logoutでaccount/personal stateと共にclearします。
+
+### 17. 競合はどう防ぎますか
+
+loadしたDrive versionとAppData revisionを保持し、save前にremoteを再読込して違えばPATCHを止め、local JSON退避とremote reloadを提示します。
+
+### 18. 競合対策の限界は
+
+Drive v3の原子的If-Match保証を確認できておらず、事前確認とPATCH間にrace windowが残ります。実Google試験も未実施です。
+
+### 19. v1移行で守ったものは
+
+原文、旧key、Company ID、events、memo、timestamps、旧scoreです。出典なし情報はunverified Factにします。
+
+### 20. どんなtestをしましたか
+
+migration、scoring、matching、Fact、AI/Watch、Local/Drive、Authをunit/componentで119件、主要user flowをEdge機能E2Eで6件です。加えてPC・モバイルの証跡撮影2件を実行し、Playwright全体では8件です。
+
+### 21. 実際に起きたv2のerrorは
+
+機能E2Eのtext selectorがJSON textareaとheading両方へ一致しました。roleをheadingへ限定し、機能6件を再成功させ、撮影2件を含む全8件も通しました。
+
+### 22. なぜGoogle実試験をしていませんか
+
+本人login、2FA、Client ID、consentは本人操作が必要で、Billing禁止条件もあります。codeを止めずMock/contractまで完成させ、未試験と明記しました。
+
+### 23. Gmailを実装しなかった理由は
+
+Restricted scope、verification、token管理、privacy、browser外schedulerが必要です。今回のSPAだけで「毎朝監視」を偽装しません。
+
+### 24. AI協働をどう説明しますか
+
+課題・仕様・安全条件は自分が決め、Codexを実装/検証支援に使い、test、Git、evidenceで確認したと説明します。
+
+### 25. 次に何をしますか
+
+まず本人によるGoogle設定と2端末実試験です。その結果を受けて競合UXを改善し、その後に通知やbackend Watchの費用/審査を再評価します。
+
+## 練習方法
+
+1. 30秒説明を暗記せず、自分の語彙へ直す。
+2. 上図を見ずに紙へ描く。
+3. 質問6、11、17へコードを開かず答える。
+4. 「実装済み」「Mockのみ」「将来」を必ず分ける。
