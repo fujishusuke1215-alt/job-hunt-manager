@@ -5,7 +5,7 @@ import { createId } from '../utils/id'
 
 export const APP_DATA_FILE_NAME = 'job-hunt-manager-data-v2.json'
 
-export type StorageSource = 'local-development' | 'google-drive'
+export type StorageSource = 'local-development' | 'google-drive' | 'supabase'
 
 export interface RemoteFileInfo {
   id: string
@@ -118,6 +118,8 @@ export type StorageErrorCode =
   | 'network-error'
   | 'drive-request-failed'
   | 'invalid-drive-response'
+  | 'revision-conflict'
+  | 'supabase-request-failed'
 
 export class StorageRepositoryError extends Error {
   readonly code: StorageErrorCode

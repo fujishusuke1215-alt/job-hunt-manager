@@ -8,6 +8,7 @@ import { Dashboard } from './components/Dashboard'
 import { DataTools } from './components/DataTools'
 import { ScoringSettings } from './components/ScoringSettings'
 import { WatchCenter } from './components/WatchCenter'
+import { LandingPage } from './components/LandingPage'
 import { getRuntimeConfig } from './config/runtime'
 import { demoCatalog } from './data/catalogData'
 import { createDemoAppData } from './data/demoDataV2'
@@ -30,8 +31,10 @@ import { selectionLabel } from './domain/selection'
 import { saveProfileDraft } from './domain/profileManagement'
 import type { AuthAccount, AuthProvider } from './providers/auth'
 import { GoogleAuthProvider, loadGoogleIdentityServices } from './providers/googleAuth'
+import { createSupabaseClient, SupabaseAuthProvider } from './providers/supabaseAuth'
 import { GoogleDriveRestTransport, GoogleDriveStorageRepository } from './repositories/googleDriveStorage'
 import { LocalDevelopmentStorageRepository } from './repositories/localDevelopmentStorage'
+import { SupabaseStorageRepository } from './repositories/supabaseStorage'
 import { StaticCatalogRepository } from './repositories/catalog'
 import type { ImportPreview, StorageConflict, StorageRepository } from './repositories/types'
 import { createImportPreview, serializeAppDataV2, StorageRepositoryError } from './repositories/types'
@@ -43,6 +46,7 @@ import {
   type LocalDriveCandidate,
 } from './services/localDriveCandidate'
 import { createId } from './utils/id'
+import { syncMonitoringTargetsFromCandidates } from './services/monitoringOnboarding'
 
 type FormState = { kind: 'add' } | { kind: 'edit'; companyId: string } | null
 type LocalCandidateScenario = 'drive-empty' | 'both'
@@ -91,7 +95,7 @@ function needsGoogleReconnect(error: unknown): boolean {
 
 export default function App() {
   const runtime = useMemo(getRuntimeConfig, [])
-  const [entryChosen, setEntryChosen] = useState(runtime.storageMode !== 'google')
+  const [entryChosen, setEntryChosen] = useState(runtime.storageMode !== 'google' && runtime.storageMode !== 'supabase')
   const [mode, setMode] = useState<AppMode>('demo')
   const [view, setView] = useState<ViewName>('dashboard')
   const [demoData, setDemoData] = useState<AppDataV2>(createDemoAppData)
@@ -129,6 +133,8 @@ export default function App() {
       ? 'ローカル開発モード'
       : runtime.storageMode === 'google'
         ? 'Google Drive appDataFolder'
+        : runtime.storageMode === 'supabase'
+          ? 'Supabase（本人専用）'
         : 'Google設定なし（本人用停止）'
 
   useEffect(() => {
@@ -147,6 +153,21 @@ export default function App() {
       // ログイン操作時に具体的なエラーを表示する。読込失敗だけではデータを変更しない。
     })
   }, [runtime.googleClientId, runtime.storageMode])
+
+  useEffect(() => {
+    if (runtime.storageMode !== 'supabase' || !runtime.supabaseUrl || !runtime.supabasePublishableKey) return
+    const provider = new SupabaseAuthProvider(createSupabaseClient(runtime.supabaseUrl, runtime.supabasePublishableKey))
+    authRef.current = provider
+    return provider.subscribe((snapshot) => {
+      if (snapshot.status === 'authenticating') { setPersonalSyncStatus('loading'); return }
+      if (snapshot.status !== 'signed-in' || !snapshot.account) { setAccount(null); setMode('demo'); setEntryChosen(false); setPersonalSyncStatus('signed-out'); return }
+      setAccount(snapshot.account); setMode('personal'); setEntryChosen(true)
+      const repository = new SupabaseStorageRepository(provider.client, snapshot.account.id)
+      repositoryRef.current = repository; expectedVersionRef.current = null; void loadRepository(repository, snapshot.account.id)
+    })
+  // loadRepository is stable enough for this one-time provider lifecycle; runtime values are immutable.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runtime.storageMode, runtime.supabasePublishableKey, runtime.supabaseUrl])
 
   const rememberConflict = (next: StorageConflict | null) => {
     conflictRef.current = next
@@ -270,11 +291,16 @@ export default function App() {
     setMode(nextMode)
     if (nextMode === 'demo') return
     if (runtime.storageMode === 'local' && !personalLoadedRef.current) void loadRepository(ensureLocalRepository())
-    else if (runtime.storageMode === 'google' && !account) setPersonalSyncStatus('signed-out')
+    else if ((runtime.storageMode === 'google' || runtime.storageMode === 'supabase') && !account) setPersonalSyncStatus('signed-out')
     else if (runtime.storageMode === 'disabled') setPersonalSyncStatus('signed-out')
   }
 
   const login = async () => {
+    if (runtime.storageMode === 'supabase') {
+      if (!authRef.current) { setPersonalSyncMessage('Supabase設定を確認してください。'); return }
+      try { await authRef.current.signIn() } catch (error) { setPersonalSyncStatus('offline'); setPersonalSyncMessage(error instanceof Error ? error.message : 'Googleログインを開始できません。') }
+      return
+    }
     if (runtime.storageMode !== 'google' || !runtime.googleClientId) {
       setPersonalSyncStatus('offline')
       setPersonalSyncMessage('Google Client IDがありません。GOOGLE_AUTH_SETUP.mdを確認してください。')
@@ -565,10 +591,14 @@ export default function App() {
       createdAt: existingEvaluation?.createdAt ?? now,
       updatedAt: now,
     }
-    commitData(touch(data, {
+    const nextData = touch(data, {
       userCompanies: currentCompany ? data.userCompanies.map((item) => item.id === companyId ? company : item) : [...data.userCompanies, company],
       evaluations: existingEvaluation ? data.evaluations.map((item) => item.id === existingEvaluation.id ? evaluation : item) : [...data.evaluations, evaluation],
-    }, now))
+    }, now)
+    commitData(nextData)
+    if (repositoryRef.current instanceof SupabaseStorageRepository) {
+      void repositoryRef.current.syncMonitoringTargets(syncMonitoringTargetsFromCandidates(nextData.userCompanies, []).targets).catch((error: unknown) => setPersonalSyncMessage(error instanceof Error ? error.message : '監視対象の同期に失敗しました。'))
+    }
     setFormState(null)
     setView('companies')
   }
@@ -612,29 +642,17 @@ export default function App() {
   }
 
   const personalGate = mode === 'personal' && (
-    runtime.storageMode === 'disabled' || (runtime.storageMode === 'google' && !account)
+    runtime.storageMode === 'disabled' || ((runtime.storageMode === 'google' || runtime.storageMode === 'supabase') && !account)
   )
   const personalEditsBlocked = mode === 'personal' && (
     conflict !== null || personalSyncStatus === 'loading' || localCandidate !== null
   )
 
   if (!entryChosen) {
-    return (
-      <main className="welcome-screen">
-        <section className="welcome-card" aria-labelledby="welcome-title">
-          <span className="brand-mark welcome-mark" aria-hidden="true">J</span>
-          <p className="eyebrow">JOB HUNT MANAGER</p>
-          <h1 id="welcome-title">就活の情報を、次の行動へ。</h1>
-          <p>架空データで機能を見るか、自分のGoogle Driveへ接続して本人用データを開きます。</p>
-          <div className="welcome-actions">
-            <button className="secondary-button" type="button" onClick={enterDemo}>デモを見る</button>
-            <button className="primary-button" type="button" disabled={!runtime.googleClientId} onClick={enterGooglePersonal}>Googleアカウントで利用する</button>
-          </div>
-          {!runtime.googleClientId && <p className="welcome-setup-note" role="note">Google Client IDのRepository Variable設定後に本人用接続が有効になります。デモは現在も利用できます。</p>}
-          <small>このGoogleアカウントのDriveへ個人データを保存します。将来、採用メールの整理機能を追加する場合は、就活に使うGoogleアカウントを選ぶと設定が簡単になる可能性があります。ただし同じアカウントは必須ではなく、メール連携用アカウントは将来別に接続できる設計を想定しています。</small>
-        </section>
-      </main>
+    if (runtime.storageMode === 'google') return (
+      <main className="welcome-screen"><section className="welcome-card" aria-labelledby="welcome-title"><span className="brand-mark welcome-mark" aria-hidden="true">J</span><p className="eyebrow">JOB HUNT MANAGER</p><h1 id="welcome-title">就活の情報を、次の行動へ。</h1><p>架空データで機能を見るか、自分のGoogle Driveへ接続して本人用データを開きます。</p><div className="welcome-actions"><button className="secondary-button" type="button" onClick={enterDemo}>デモを見る</button><button className="primary-button" type="button" disabled={!runtime.googleClientId} onClick={enterGooglePersonal}>Googleアカウントで利用する</button></div></section></main>
     )
+    return <LandingPage onDemo={enterDemo} onLogin={enterGooglePersonal} loginAvailable={runtime.storageMode === 'supabase' ? Boolean(runtime.supabaseUrl && runtime.supabasePublishableKey) : Boolean(runtime.googleClientId)} />
   }
 
   return (
@@ -646,7 +664,7 @@ export default function App() {
       accountEmail={account?.email}
       accountName={account?.name}
       accountPictureUrl={account?.pictureUrl}
-      authAvailable={runtime.storageMode === 'google'}
+      authAvailable={runtime.storageMode === 'google' || runtime.storageMode === 'supabase'}
       reconnectRequired={reconnectRequired}
       onModeChange={changeMode}
       onViewChange={setView}

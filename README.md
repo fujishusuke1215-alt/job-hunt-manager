@@ -4,7 +4,7 @@
 
 **公開デモ:** <https://fujishusuke1215-alt.github.io/job-hunt-manager/>
 
-公開URLでは、ログイン不要の架空デモとGoogle本人用の入口を分けています。本人用はGoogle CloudのClient ID設定後に有効になり、各利用者自身のDrive `appDataFolder`へ保存します。
+公開URLでは、ログイン不要の架空デモとSupabase Authによる本人用入口を分けています。本人用データはRLS付きSupabase `user_app_data` に保存し、Google Driveはlegacy移行用としてのみ残します。
 
 ![v2ダッシュボード](docs/portfolio/screenshots/v2-dashboard.png)
 
@@ -43,7 +43,8 @@ pnpm run dev
 - 期限緊急度と企業適合度を混同しない「今日の要対応」
 - schemaVersion 2 JSONバックアップ、v1 import/migration互換、元v1の保持
 - 保存先をUIから分けるStorageRepository
-- GIS Token model用AuthProviderとGoogle Drive `appDataFolder` repository
+- Supabase Auth sessionとrevision条件付きSupabaseStorageRepository
+- Gmail/Web CollectorのFinding inbox、候補企業から派生する監視対象、職歴あり応募可否reviewの基盤
 - 公開デモと本人用データの分離、PC/スマートフォン幅対応
 
 ## データ構造
@@ -59,14 +60,19 @@ flowchart LR
   UC --> WF[Watch Finding]
   UI --> SR[StorageRepository]
   SR --> LS[(Local Development)]
-  SR --> GD[(Google Drive appDataFolder)]
+  SR --> SB[(Supabase user_app_data)]
+  Gmail[Personal Gmail Collector] --> CF[collector_findings]
+  Web[Web Collector] --> CF
+  CF --> UI
 ```
 
 Company Masterへの紐付け候補は表示しますが、表記ゆれだけで自動統合しません。ランキングは評価済み項目だけで計算し、充足率100%未満は「暫定」です。
 
-## Google連携の現在地
+## Supabase / Google連携の現在地
 
-GitHub Pages向けの接続画面、GIS Token model、Drive Repository、401再接続、端末v1/v2移行、Drive/端末の選択UIまで実装済みです。要求scopeは `openid email profile` と `https://www.googleapis.com/auth/drive.appdata` だけで、Gmail scopeはありません。access tokenはメモリだけで扱います。
+通常ログインはSupabase AuthのGoogle providerを使い、scopeはidentityだけです。Gmail/Drive scopeは要求しません。AppDataV2はrevision条件付きで保存し、別タブ/端末の更新は競合として停止します。Gmailは所有者専用Apps Scriptに分離し、CollectorはAppDataV2を直接更新しません。
+
+本番設定は[Live setup checklist](docs/LIVE_SETUP_CHECKLIST.md)、Collector運用は[Automated Job Hunt](docs/AUTOMATED_JOB_HUNT.md)と[Gmail Personal Collector](docs/GMAIL_PERSONAL_COLLECTOR.md)を参照してください。
 
 実GoogleアカウントでのOAuth/Drive接続は未実施です。Client ID作成、本人ログイン、2FAは利用者本人だけが行います。Billing、カード、課金trialは使いません。設定する場合は [Google認証セットアップ](docs/GOOGLE_AUTH_SETUP.md) を読み、実施時点の公式料金と画面を再確認してください。
 

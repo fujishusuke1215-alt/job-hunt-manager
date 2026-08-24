@@ -2,7 +2,6 @@ export const GOOGLE_AUTH_SCOPES = [
   'openid',
   'email',
   'profile',
-  'https://www.googleapis.com/auth/drive.appdata',
 ] as const
 
 export const GOOGLE_AUTH_SCOPE = GOOGLE_AUTH_SCOPES.join(' ')
@@ -78,7 +77,7 @@ export function assertOnlyAllowedGoogleScopes(scopeValue: string): void {
   if (!hasEveryRequired || hasUnexpected) {
     throw new AuthProviderError(
       'invalid-scope',
-      '許可されたscopeはopenid、email、profile、drive.appdataだけです。',
+      '許可されたscopeはopenid、email、profileだけです。',
     )
   }
 }
