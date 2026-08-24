@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { parseAppDataV2 } from '../domain/schemas'
 import type { AppDataV2 } from '../domain/types'
+import type { CollectorFinding } from '../services/collectorFindings'
 import {
   createConflictBackup,
   createImportPreview,
@@ -59,6 +60,13 @@ export class SupabaseStorageRepository implements StorageRepository {
     const { error } = await this.client.rpc('sync_monitoring_targets', { targets: rows })
     if (error) throw this.error(error.message)
   }
+
+  async loadCollectorFindings(): Promise<CollectorFinding[]> {
+    const { data, error } = await this.client.from('collector_findings').select('*').eq('user_id', this.userId).in('status', ['new', 'needs_review']).order('observed_at', { ascending: false })
+    if (error) throw this.error(error.message)
+    return (data ?? []).map((row: Record<string, unknown>) => ({ id: String(row.id), company: typeof row.company === 'string' ? row.company : null, findingType: String(row.finding_type), payload: (row.payload ?? {}) as Record<string, unknown>, sourceType: row.source_type as CollectorFinding['sourceType'], sourceExternalId: typeof row.source_external_id === 'string' ? row.source_external_id : null, sourceUrl: typeof row.source_url === 'string' ? row.source_url : null, sourceTimestamp: typeof row.source_timestamp === 'string' ? row.source_timestamp : null, observedAt: String(row.observed_at), confidence: Number(row.confidence), evidenceExcerpt: String(row.evidence_excerpt), fingerprint: String(row.fingerprint), status: row.status as CollectorFinding['status'], reviewReason: typeof row.review_reason === 'string' ? row.review_reason : null }))
+  }
+  async setCollectorFindingStatus(id: string, status: 'approved' | 'rejected'): Promise<void> { const { error } = await this.client.from('collector_findings').update({ status, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', this.userId).in('status', ['new', 'needs_review']); if (error) throw this.error(error.message) }
 
   private parse(value: unknown): AppDataV2 {
     try { return parseAppDataV2(value) } catch (cause) { throw new StorageRepositoryError('invalid-remote-data', 'Supabaseの保存データ検証に失敗しました。上書きしていません。', { cause }) }

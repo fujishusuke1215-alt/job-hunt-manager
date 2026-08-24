@@ -105,7 +105,7 @@ export const watchFindingTypes = [
 export type WatchFindingType = (typeof watchFindingTypes)[number]
 
 export type AppMode = 'demo' | 'personal'
-export type ViewName = 'dashboard' | 'companies' | 'scoring' | 'ai-sync' | 'watch' | 'data'
+export type ViewName = 'dashboard' | 'companies' | 'scoring' | 'ai-sync' | 'watch' | 'findings' | 'data'
 export type SyncStatus = 'signed-out' | 'loading' | 'synced' | 'saving' | 'offline' | 'conflict'
 export type StorageMode = 'local' | 'google' | 'supabase' | 'disabled'
 

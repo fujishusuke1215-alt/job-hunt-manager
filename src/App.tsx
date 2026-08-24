@@ -9,6 +9,7 @@ import { DataTools } from './components/DataTools'
 import { ScoringSettings } from './components/ScoringSettings'
 import { WatchCenter } from './components/WatchCenter'
 import { LandingPage } from './components/LandingPage'
+import { CollectorFindings } from './components/CollectorFindings'
 import { getRuntimeConfig } from './config/runtime'
 import { demoCatalog } from './data/catalogData'
 import { createDemoAppData } from './data/demoDataV2'
@@ -47,6 +48,7 @@ import {
 } from './services/localDriveCandidate'
 import { createId } from './utils/id'
 import { syncMonitoringTargetsFromCandidates } from './services/monitoringOnboarding'
+import { approveCollectorFinding, type CollectorFinding } from './services/collectorFindings'
 
 type FormState = { kind: 'add' } | { kind: 'edit'; companyId: string } | null
 type LocalCandidateScenario = 'drive-empty' | 'both'
@@ -111,6 +113,7 @@ export default function App() {
   const [localCandidateScenario, setLocalCandidateScenario] = useState<LocalCandidateScenario | null>(null)
   const [reconnectRequired, setReconnectRequired] = useState(false)
   const [catalog, setCatalog] = useState<CatalogData>(demoCatalog)
+  const [collectorFindings, setCollectorFindings] = useState<CollectorFinding[]>([])
 
   const repositoryRef = useRef<StorageRepository | null>(null)
   const authRef = useRef<AuthProvider | null>(null)
@@ -193,6 +196,7 @@ export default function App() {
         return
       }
       const loaded = result.status === 'loaded' ? result.data : createEmptyAppData()
+      if (repository instanceof SupabaseStorageRepository) void repository.loadCollectorFindings().then(setCollectorFindings).catch(() => setCollectorFindings([]))
       expectedVersionRef.current = result.version
       unsavedPersonalRef.current = null
       setPersonalData(loaded)
@@ -629,6 +633,13 @@ export default function App() {
   const changeWatchStatus = (id: string, status: WatchFindingStatus) => {
     commitData(touch(data, { watchFindings: updateWatchFindingStatus(data.watchFindings, id, status) }))
   }
+  const approveFinding = (finding: CollectorFinding, companyId: string) => {
+    if (!(repositoryRef.current instanceof SupabaseStorageRepository)) return
+    const watch = approveCollectorFinding(finding, companyId)
+    if (data.watchFindings.some(item => item.userCompanyId === companyId && item.fingerprint === finding.fingerprint)) return
+    void repositoryRef.current.setCollectorFindingStatus(finding.id, 'approved').then(() => { commitData(touch(data, { watchFindings: [...data.watchFindings, watch] })); setCollectorFindings(items => items.filter(item => item.id !== finding.id)) }).catch(error => setPersonalSyncMessage(error instanceof Error ? error.message : '承認に失敗しました。'))
+  }
+  const rejectFinding = (id: string) => { if (!(repositoryRef.current instanceof SupabaseStorageRepository)) return; void repositoryRef.current.setCollectorFindingStatus(id, 'rejected').then(() => setCollectorFindings(items => items.filter(item => item.id !== id))).catch(error => setPersonalSyncMessage(error instanceof Error ? error.message : '却下に失敗しました。')) }
 
   const enterDemo = () => {
     setMode('demo')
@@ -695,6 +706,7 @@ export default function App() {
             {view === 'scoring' && <ScoringSettings data={data} onChange={commitData} />}
             {view === 'ai-sync' && <AiSync data={data} catalog={catalog} onChange={commitData} />}
             {view === 'watch' && <WatchCenter companies={companyViews} findings={data.watchFindings} runs={data.watchRuns} onStatusChange={changeWatchStatus} onOpenCompany={openCompany} />}
+            {view === 'findings' && <CollectorFindings findings={collectorFindings} companies={companyViews} onApprove={approveFinding} onReject={rejectFinding} />}
             {view === 'data' && <DataTools mode={mode} data={data} storageLabel={storageLabel} syncStatus={mode === 'demo' ? 'synced' : personalSyncStatus} onPreviewImport={previewBackupImport} onCommitImport={commitBackupImport} onClear={() => commitData(createEmptyAppData())} onResetDemo={() => setDemoData(createDemoAppData())} />}
 
             {selectedView && <CompanyDetail view={selectedView} profile={profile} onClose={() => setSelectedId(null)} onEdit={() => { setFormState({ kind: 'edit', companyId: selectedView.company.id }); setSelectedId(null) }} onUpdateEvents={updateEvents} onSaveFact={saveFact} />}
