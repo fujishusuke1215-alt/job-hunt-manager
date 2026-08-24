@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v6
         with: { node-version: '22.x', cache: 'pnpm' }
       - run: npm install --global pnpm@11.19.0 && pnpm install --frozen-lockfile
-      - run: pnpm run collector:dry-run
+      - run: node tools/web-collector/run.mjs
         env:
           COLLECTOR_DRY_RUN: ${{ inputs.dry_run || 'false' }}
           COLLECTOR_INGEST_URL: ${{ secrets.COLLECTOR_INGEST_URL }}
