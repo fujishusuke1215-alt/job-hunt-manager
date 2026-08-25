@@ -48,6 +48,7 @@ import {
 } from './services/localDriveCandidate'
 import { createId } from './utils/id'
 import { syncMonitoringTargetsFromCandidates } from './services/monitoringOnboarding'
+import { previewMonitoringTargetsCsv, type CsvPreview } from './services/monitoringCsv'
 import { approveCollectorFinding, type CollectorFinding } from './services/collectorFindings'
 
 type FormState = { kind: 'add' } | { kind: 'edit'; companyId: string } | null
@@ -284,6 +285,13 @@ export default function App() {
       setPersonalData(withActivity)
       persistPersonal(withActivity)
     }
+  }
+
+  const previewCsvImport = (raw: string): CsvPreview => previewMonitoringTargetsCsv(raw, data)
+  const commitCsvImport = async (preview: CsvPreview): Promise<void> => {
+    const next = touch(data, { userCompanies: preview.candidates })
+    commitData(next)
+    if (repositoryRef.current instanceof SupabaseStorageRepository) await repositoryRef.current.syncMonitoringTargets(preview.targets)
   }
 
   const changeMode = (nextMode: AppMode) => {
@@ -707,7 +715,7 @@ export default function App() {
             {view === 'ai-sync' && <AiSync data={data} catalog={catalog} onChange={commitData} />}
             {view === 'watch' && <WatchCenter companies={companyViews} findings={data.watchFindings} runs={data.watchRuns} onStatusChange={changeWatchStatus} onOpenCompany={openCompany} />}
             {view === 'findings' && <CollectorFindings findings={collectorFindings} companies={companyViews} onApprove={approveFinding} onReject={rejectFinding} />}
-            {view === 'data' && <DataTools mode={mode} data={data} storageLabel={storageLabel} syncStatus={mode === 'demo' ? 'synced' : personalSyncStatus} onPreviewImport={previewBackupImport} onCommitImport={commitBackupImport} onClear={() => commitData(createEmptyAppData())} onResetDemo={() => setDemoData(createDemoAppData())} />}
+            {view === 'data' && <DataTools mode={mode} data={data} storageLabel={storageLabel} syncStatus={mode === 'demo' ? 'synced' : personalSyncStatus} onPreviewImport={previewBackupImport} onCommitImport={commitBackupImport} onPreviewCsvImport={previewCsvImport} onCommitCsvImport={commitCsvImport} onClear={() => commitData(createEmptyAppData())} onResetDemo={() => setDemoData(createDemoAppData())} />}
 
             {selectedView && <CompanyDetail view={selectedView} profile={profile} onClose={() => setSelectedId(null)} onEdit={() => { setFormState({ kind: 'edit', companyId: selectedView.company.id }); setSelectedId(null) }} onUpdateEvents={updateEvents} onSaveFact={saveFact} />}
             {formState && <CompanyForm companyView={editingView} catalog={catalog} profile={profile} evaluation={editingView?.evaluation ?? null} onSubmit={saveCompany} onSaveProfile={(profileDraft) => commitData(saveProfileDraft(data, profileDraft))} onCancel={() => setFormState(null)} />}
