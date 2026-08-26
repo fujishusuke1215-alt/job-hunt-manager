@@ -9,8 +9,15 @@ export class SupabaseAuthProvider implements AuthProvider {
   private snapshot: AuthSnapshot = { status: 'authenticating', account: null, error: null }
   private readonly listeners = new Set<AuthListener>()
   constructor(readonly client: SupabaseClient) {
-    void client.auth.getSession().then(({ data, error }) => this.set(error ? { status: 'error', account: null, error: error.message } : { status: data.session ? 'signed-in' : 'signed-out', account: data.session ? accountOf(data.session.user) : null, error: null }))
-    client.auth.onAuthStateChange((_event, session) => this.set({ status: session ? 'signed-in' : 'signed-out', account: session ? accountOf(session.user) : null, error: null }))
+    let authEventSeen = false
+    client.auth.onAuthStateChange((_event, session) => {
+      authEventSeen = true
+      this.set({ status: session ? 'signed-in' : 'signed-out', account: session ? accountOf(session.user) : null, error: null })
+    })
+    void client.auth.getSession().then(({ data, error }) => {
+      if (authEventSeen) return
+      this.set(error ? { status: 'error', account: null, error: error.message } : { status: data.session ? 'signed-in' : 'signed-out', account: data.session ? accountOf(data.session.user) : null, error: null })
+    })
   }
   getSnapshot() { return { ...this.snapshot, account: this.snapshot.account && { ...this.snapshot.account } } }
   subscribe(listener: AuthListener) { this.listeners.add(listener); listener(this.getSnapshot()); return () => { this.listeners.delete(listener) } }
