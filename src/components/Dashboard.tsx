@@ -3,6 +3,7 @@ import type { CompanyView, WatchFinding } from '../domain/types'
 import { rankCompanyViews } from '../domain/selectors'
 import { buildTodayActions } from '../domain/watch'
 import { deadlineTone, formatDeadlineLabel, getDaysUntil } from '../utils/deadlines'
+import type { CollectorStateSummary } from '../repositories/supabaseStorage'
 
 interface DashboardProps {
   companies: CompanyView[]
@@ -10,9 +11,10 @@ interface DashboardProps {
   onOpenCompany: (id: string) => void
   onAddCompany: () => void
   onOpenWatch: () => void
+  collectorStates?: CollectorStateSummary[]
 }
 
-export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, onOpenWatch }: DashboardProps) {
+export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, onOpenWatch, collectorStates = [] }: DashboardProps) {
   const activeCount = companies.filter((view) => !['検討中', '内定', '終了'].includes(view.company.applicationStatus)).length
   const waitingCount = companies.filter((view) => view.company.applicationStatus === '結果待ち').length
   const sevenDayCount = companies.flatMap((view) => view.company.events).filter((event) => {
@@ -27,6 +29,10 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
     companyScores: Object.fromEntries(companies.map((view) => [view.company.id, view.score.score])),
   })
   const topCompanies = rankCompanyViews(companies).slice(0, 4)
+  const webStates = collectorStates.filter((state) => state.collectorType === 'web')
+  const lastWebSuccess = webStates.map((state) => state.lastSuccess).filter((value): value is string => value !== null).sort().at(-1) ?? null
+  const webFailures = webStates.filter((state) => state.failureCount > 0).length
+  const webStale = !lastWebSuccess || Date.now() - new Date(lastWebSuccess).getTime() > 36 * 60 * 60 * 1000
 
   return (
     <section className="page-stack" aria-labelledby="dashboard-title">
@@ -79,6 +85,12 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
                 return <div className="status-bar-row" key={status}><div><span>{status}</span><strong>{count}</strong></div><span className="status-track"><span style={{ width: `${(count / companies.length) * 100}%` }} /></span></div>
               })}
             </div>
+          </article>
+
+          <article className="panel status-panel">
+            <div className="panel-heading compact"><div><p className="eyebrow">COLLECTOR STATUS</p><h2>Web監視</h2></div><span className="panel-count">対象 {webStates.length}</span></div>
+            {lastWebSuccess ? <p className="panel-description">最終成功: {new Date(lastWebSuccess).toLocaleString('ja-JP')}</p> : <p className="panel-description">まだ成功記録がありません。</p>}
+            <p className="muted-message">{webStale ? '要確認: 36時間以上成功記録がありません。' : webFailures ? `一部失敗: ${webFailures}件は次回実行で再試行します。` : '正常: 直近のWeb監視は成功しています。'}</p>
           </article>
         </div>
       )}

@@ -89,7 +89,6 @@ pnpm run test:collector
 ## Future work
 
 - 新規企業を追加したときの企業単位の Gmail 履歴確認フロー
-- Collector 実行履歴と stale warning の画面表示の拡充
 - 対象企業ごとの収集ルールを UI から調整する機能
 
 詳しい制作意図と面接向けの説明は [docs/PORTFOLIO_DESCRIPTION.md](docs/PORTFOLIO_DESCRIPTION.md) にまとめています。

@@ -35,7 +35,7 @@ import { GoogleAuthProvider, loadGoogleIdentityServices } from './providers/goog
 import { createSupabaseClient, SupabaseAuthProvider } from './providers/supabaseAuth'
 import { GoogleDriveRestTransport, GoogleDriveStorageRepository } from './repositories/googleDriveStorage'
 import { LocalDevelopmentStorageRepository } from './repositories/localDevelopmentStorage'
-import { SupabaseStorageRepository } from './repositories/supabaseStorage'
+import { SupabaseStorageRepository, type CollectorStateSummary } from './repositories/supabaseStorage'
 import { StaticCatalogRepository } from './repositories/catalog'
 import type { ImportPreview, StorageConflict, StorageRepository } from './repositories/types'
 import { createImportPreview, serializeAppDataV2, StorageRepositoryError } from './repositories/types'
@@ -115,6 +115,7 @@ export default function App() {
   const [reconnectRequired, setReconnectRequired] = useState(false)
   const [catalog, setCatalog] = useState<CatalogData>(demoCatalog)
   const [collectorFindings, setCollectorFindings] = useState<CollectorFinding[]>([])
+  const [collectorStates, setCollectorStates] = useState<CollectorStateSummary[]>([])
 
   const repositoryRef = useRef<StorageRepository | null>(null)
   const authRef = useRef<AuthProvider | null>(null)
@@ -197,7 +198,10 @@ export default function App() {
         return
       }
       const loaded = result.status === 'loaded' ? result.data : createEmptyAppData()
-      if (repository instanceof SupabaseStorageRepository) void repository.loadCollectorFindings().then(setCollectorFindings).catch(() => setCollectorFindings([]))
+      if (repository instanceof SupabaseStorageRepository) {
+        void repository.loadCollectorFindings().then(setCollectorFindings).catch(() => setCollectorFindings([]))
+        void repository.loadCollectorStates().then(setCollectorStates).catch(() => setCollectorStates([]))
+      }
       expectedVersionRef.current = result.version
       unsavedPersonalRef.current = null
       setPersonalData(loaded)
@@ -709,7 +713,7 @@ export default function App() {
           </section>
         ) : (
           <>
-            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} />}
+            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} />}
             {view === 'companies' && <CompanyList companies={companyViews} filters={filters} onFiltersChange={setFilters} onOpen={openCompany} onEdit={(companyId) => setFormState({ kind: 'edit', companyId })} onDelete={deleteCompany} onAdd={() => setFormState({ kind: 'add' })} />}
             {view === 'scoring' && <ScoringSettings data={data} onChange={commitData} />}
             {view === 'ai-sync' && <AiSync data={data} catalog={catalog} onChange={commitData} />}
