@@ -1,9 +1,16 @@
 name: Collect public recruitment pages
 on:
-  schedule: [{ cron: '17 21 * * *' }] # around 06:17 JST; schedule is best-effort
+  schedule:
+    - cron: '17 21 * * *'
   workflow_dispatch:
-    inputs: { dry_run: { description: 'Do not ingest findings', required: false, type: boolean, default: true } }
-permissions: { contents: read }
+    inputs:
+      dry_run:
+        description: 'Do not ingest findings'
+        required: false
+        type: boolean
+        default: true
+permissions:
+  contents: read
 concurrency: { group: web-collector, cancel-in-progress: false }
 jobs:
   collect:
