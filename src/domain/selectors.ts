@@ -44,19 +44,22 @@ export function rankCompanyViews(views: CompanyView[]): Array<CompanyView & { ra
     if (b.score.score === null) return -1
     return b.score.score - a.score.score
       || b.score.coverage - a.score.coverage
+      || (a.evaluation?.sourceRank ?? Number.MAX_SAFE_INTEGER) - (b.evaluation?.sourceRank ?? Number.MAX_SAFE_INTEGER)
       || a.displayName.localeCompare(b.displayName, 'ja')
       || a.company.id.localeCompare(b.company.id)
   })
 
   let previousScore: number | null = null
+  let previousSourceRank: number | null = null
   let previousRank = 0
   return sorted.map((view, index) => {
-    const rank = view.score.score !== null && previousScore === view.score.score
+    const sourceRank = view.evaluation?.sourceRank ?? null
+    const rank = view.score.score !== null && previousScore === view.score.score && sourceRank === previousSourceRank
       ? previousRank
       : index + 1
     previousScore = view.score.score
+    previousSourceRank = sourceRank
     previousRank = rank
     return { ...view, rank }
   })
 }
-

@@ -216,6 +216,10 @@ export const companyEvaluationSchema = z.object({
   userCompanyId: z.string().min(1),
   scoringProfileId: z.string().min(1),
   values: z.record(z.string(), z.number().finite().nullable()),
+  sourceName: z.string().min(1).optional(),
+  sourceAsOf: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  sourceFingerprint: z.string().min(1).optional(),
+  sourceRank: z.number().int().positive().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 }).strict()
@@ -397,11 +401,11 @@ export const appDataV2Schema = z.object({
             path: ['evaluations', evaluationIndex, 'values', criterionId],
             message: '評価値が参照するCriterion IDがプロファイルに存在しません。',
           })
-        } else if (score !== null && (!Number.isInteger(score) || score < 0 || score > criterion.scaleMax)) {
+        } else if (score !== null && (score < 0 || score > criterion.scaleMax)) {
           context.addIssue({
             code: 'custom',
             path: ['evaluations', evaluationIndex, 'values', criterionId],
-            message: `評価値は0以上${criterion.scaleMax}以下の整数にしてください。`,
+            message: `評価値は0以上${criterion.scaleMax}以下にしてください。`,
           })
         }
       })

@@ -40,7 +40,10 @@ function filterAndSort(views: CompanyView[], filters: CompanyFilters) {
       if (a.score.score === null && b.score.score === null) return a.displayName.localeCompare(b.displayName, 'ja')
       if (a.score.score === null) return 1
       if (b.score.score === null) return -1
-      return b.score.score - a.score.score || b.score.coverage - a.score.coverage || a.displayName.localeCompare(b.displayName, 'ja')
+      return b.score.score - a.score.score
+        || b.score.coverage - a.score.coverage
+        || (a.evaluation?.sourceRank ?? Number.MAX_SAFE_INTEGER) - (b.evaluation?.sourceRank ?? Number.MAX_SAFE_INTEGER)
+        || a.displayName.localeCompare(b.displayName, 'ja')
     }
     if (filters.sort === '更新が新しい順') return new Date(b.company.updatedAt).getTime() - new Date(a.company.updatedAt).getTime()
     if (filters.sort === '企業名順') return a.displayName.localeCompare(b.displayName, 'ja')

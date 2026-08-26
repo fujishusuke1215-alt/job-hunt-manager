@@ -95,8 +95,8 @@ export function CompanyForm({ companyView, catalog, profile, evaluation, onSubmi
     }
     for (const item of profileDraft.criteria) {
       const value = values[item.id]
-      if (value !== null && (!Number.isInteger(value) || value < 0 || value > item.scaleMax)) {
-        setError(`「${item.label}」は0から${item.scaleMax}までの整数で入力してください。`)
+      if (value !== null && (!Number.isFinite(value) || value < 0 || value > item.scaleMax)) {
+        setError(`「${item.label}」は0から${item.scaleMax}までで入力してください。`)
         return
       }
     }
@@ -170,7 +170,7 @@ export function CompanyForm({ companyView, catalog, profile, evaluation, onSubmi
                       type="number"
                       min="0"
                       max={item.scaleMax}
-                      step="1"
+                      step="0.1"
                       disabled={!item.enabled}
                       value={values[item.id] ?? ''}
                       onChange={(event) => setValues({ ...values, [item.id]: event.target.value === '' ? null : Number(event.target.value) })}

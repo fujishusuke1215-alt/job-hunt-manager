@@ -215,6 +215,12 @@ export interface CompanyEvaluation {
   userCompanyId: string
   scoringProfileId: string
   values: Record<string, number | null>
+  /** Optional provenance for a reproducible personal ranking import. */
+  sourceName?: string
+  sourceAsOf?: string
+  sourceFingerprint?: string
+  /** Explicit source ordering used only when equal scores need a stable, documented tie-break. */
+  sourceRank?: number
   createdAt: string
   updatedAt: string
 }
