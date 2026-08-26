@@ -14,6 +14,14 @@ export class SupabaseAuthProvider implements AuthProvider {
       authEventSeen = true
       this.set({ status: session ? 'signed-in' : 'signed-out', account: session ? accountOf(session.user) : null, error: null })
     })
+    const hash = typeof window !== 'undefined' ? new URLSearchParams(window.location.hash.replace(/^#/, '')) : null
+    const hashAccessToken = hash?.get('access_token')
+    const hashRefreshToken = hash?.get('refresh_token')
+    if (hashAccessToken && hashRefreshToken) {
+      void client.auth.setSession({ access_token: hashAccessToken, refresh_token: hashRefreshToken }).then(() => {
+        if (typeof window !== 'undefined') window.history.replaceState({}, document.title, window.location.pathname + window.location.search)
+      })
+    }
     void client.auth.getSession().then(({ data, error }) => {
       if (authEventSeen) return
       this.set(error ? { status: 'error', account: null, error: error.message } : { status: data.session ? 'signed-in' : 'signed-out', account: data.session ? accountOf(data.session.user) : null, error: null })
