@@ -11,3 +11,6 @@ test-results/
 *.log
 .DS_Store
 Thumbs.db
+monitoring-targets-phase*.csv
+monitoring-targets-audit-phase*.md
+mypage-accounts.private*.csv

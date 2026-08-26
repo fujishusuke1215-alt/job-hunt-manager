@@ -1,18 +1,72 @@
-# Job Hunt Manager v2
+# Job Hunt Manager
 
-応募・検討している企業を登録した後、選考、締切、企業評価、採用情報の変化を一元管理し、「次に何をするか」を判断しやすくする個人用Webアプリです。実用品、就活ポートフォリオ、Web開発初心者の学習証跡を同じ重さで作っています。
+就職活動で分散しやすい企業情報、選考状況、締切、評価、更新情報を一元管理する React / TypeScript アプリです。情報を探し回るのではなく、必要な更新を Finding として集め、内容を確認してから正式データに反映する運用を目指しています。
 
-**公開デモ:** <https://fujishusuke1215-alt.github.io/job-hunt-manager/>
+**公開サイト:** https://fujishusuke1215-alt.github.io/job-hunt-manager/
 
-公開URLでは、ログイン不要の架空デモとSupabase Authによる本人用入口を分けています。本人用データはRLS付きSupabase `user_app_data` に保存し、Google Driveはlegacy移行用としてのみ残します。
+公開サイトには、ログイン不要で試せる完全架空の Demo と、Google Login 後の個人用ワークスペースがあります。Demo に実在企業、実応募状況、メール、アカウント情報は含みません。
 
-![v2ダッシュボード](docs/portfolio/screenshots/v2-dashboard.png)
+## 開発背景
 
-画像と同梱デモは完全な架空データです。実企業、実応募状況、実メール、担当者情報は含みません。
+応募候補が増えると、Gmail、企業採用サイト、MyPage、締切、選考状況、企業評価が別々の場所に分かれます。確認作業に時間を取られ、見落としや判断の遅れが起こりやすいことが課題でした。
 
-## まず使う
+そこで、企業と選考を管理する画面に加え、メールや公開採用ページの更新を候補情報として収集し、ユーザーが review / approve を経て正式データにする仕組みを実装しました。自動収集の結果をそのまま確定情報にしないことが、このアプリの設計上の重要な点です。
 
-Windowsで無料の公式Node.js LTSを入れ、PowerShellでこのフォルダーを開きます。Docker、Python、DBは不要です。
+## 主な機能
+
+- Google Login とユーザー単位で分離されたデータ保存
+- 企業、選考イベント、締切、評価、Research Fact の管理
+- 今日の要対応、直近7日、新着 Finding を確認するダッシュボード
+- 評価項目と重み付けを変更できるランキング
+- CSV の preview / validation を経由した候補企業と監視対象の初期登録
+- Collector Finding の preview、approve、reject と重複防止
+- 応募候補の追加・更新から監視対象を派生させる Dynamic Monitoring
+- 完全架空データだけで試せる公開 Demo
+
+## 一般公開機能と Owner 専用自動化
+
+一般公開部分は、Google Login、企業・選考・締切・評価の管理、Finding review、Demo、ユーザー分離を提供するアプリです。
+
+一方、Gmail の収集、過去メールの backfill、個人の監視対象の初期投入、公開採用ページの定期収集は **Owner Personal Automation** として分離しています。これは所有者の個人運用向けであり、一般ユーザー向けに Gmail の自動連携を提供するものではありません。通常の Google Login は基本プロフィール情報のみを利用し、Gmail / Drive scope は要求しません。
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI[React + TypeScript] --> AUTH[Supabase Auth]
+  UI --> DATA[(Supabase / RLS)]
+  UI --> REVIEW[Finding review]
+  CSV[Private monitoring CSV] --> IMPORT[Preview + validation]
+  IMPORT --> DATA
+  WEB[GitHub Actions Web Collector] --> INGEST[Supabase Edge Function]
+  GMAIL[Owner Apps Script + Gmail API] --> INGEST
+  INGEST --> FINDINGS[(Collector Findings)]
+  FINDINGS --> REVIEW
+  REVIEW --> DATA
+```
+
+正式データと Collector Finding を分け、fingerprint と状態管理で重複を抑制しています。Web Collector は正規化したページ内容の差分を扱い、個別サイトの失敗が他サイトの実行を止めないようにしています。
+
+## Security / Privacy
+
+- Supabase Row Level Security によりログインユーザーごとのデータを分離
+- Demo はログイン済みデータと分離し、架空データのみを表示
+- service role、OAuth secret、collector token、Gmail token はブラウザやリポジトリに置かない
+- 個人用の監視 CSV と MyPage 用 private CSV は Git 管理から除外
+- Gmail は本文全文や password、認証コードを正式データとして保存しない
+- GitHub Actions は secret を workflow の安全な実行コンテキストでのみ参照
+
+公開用の CSV 例は [docs/monitoring-targets.example.csv](docs/monitoring-targets.example.csv) を参照してください。全行が架空の企業と URL です。
+
+## Tech Stack
+
+- React, TypeScript, Vite
+- Supabase Auth, Postgres, RLS, Edge Functions
+- Google Apps Script / Gmail API（Owner 専用）
+- GitHub Actions（公開採用ページの定期監視）
+- GitHub Pages
+
+## Setup
 
 ```powershell
 corepack enable
@@ -21,124 +75,21 @@ pnpm install --frozen-lockfile
 pnpm run dev
 ```
 
-表示された `http://localhost:5173` をEdgeまたはChromeで開きます。画面右上のモードを選びます。
+環境変数と本番設定は [.env.example](.env.example) および [docs/LIVE_SETUP_CHECKLIST.md](docs/LIVE_SETUP_CHECKLIST.md) を参照してください。実運用では Supabase の Google provider、RLS、Edge Function、GitHub Actions secrets を設定します。個人 Gmail を扱う Owner Personal Automation は公開アプリの通常ログインとは別に設定します。
 
-- `公開デモ`: 架空の4社で全画面を試す。再読み込みで初期状態へ戻る。
-- `本人用`: 開発時は「ローカル開発モード」と明示してlocalStorageへ保存する。
-- Google設定後の本人用: Googleログイン後、Driveの非表示領域 `appDataFolder` を保存先にする。
-
-基本操作は「企業・選考 → 企業を登録 → 企業カード → 選考予定や企業情報を追加」です。評価項目は「評価設定」、ChatGPT等からの候補は「AIから取り込む」、承認した変化は「更新・通知」で管理します。詳しい手順は [はじめに読む資料](docs/00_START_HERE.md) にあります。
-
-## v2でできること
-
-- User CompanyとCompany Masterを分離し、名称変更に影響されない恒久IDで任意に紐付け
-- 企業CRUD、選考イベントCRUD、ステータス、締切、面接、メモ
-- 企業名・職種・メモ・Research Fact検索、複合フィルター、4種類の並び替え
-- 項目名、説明、最大点、重要度、有効/無効、順序を変更できる評価設定。新規・デモは10点満点のバランス型
-- 選考段階、終了理由、内定後の判断を分け、「不合格」と「選考管理を終了」を区別
-- 未評価を0点にしない暫定スコアと評価充足率
-- 値、出典、確認日、対象年度、確認レベル、AI整理有無を分けるResearch Fact
-- Zodで検証するAI Sync JSON、差分preview、個別選択、追加確認後の反映
-- fingerprintで重複を防ぎ、確認・完了・非表示を管理するWatch Center
-- 期限緊急度と企業適合度を混同しない「今日の要対応」
-- schemaVersion 2 JSONバックアップ、v1 import/migration互換、元v1の保持
-- 保存先をUIから分けるStorageRepository
-- Supabase Auth sessionとrevision条件付きSupabaseStorageRepository
-- Gmail/Web CollectorのFinding inbox、候補企業から派生する監視対象、職歴あり応募可否reviewの基盤
-- 公開デモと本人用データの分離、PC/スマートフォン幅対応
-
-## データ構造
-
-```mermaid
-flowchart LR
-  UI[React UI] --> UC[User Company]
-  UC --> MC[Company Master]
-  UC --> EV[Selection Event]
-  UC --> CE[Company Evaluation]
-  SP[Scoring Profile] --> CE
-  UC --> RF[Research Fact + Source]
-  UC --> WF[Watch Finding]
-  UI --> SR[StorageRepository]
-  SR --> LS[(Local Development)]
-  SR --> SB[(Supabase user_app_data)]
-  Gmail[Personal Gmail Collector] --> CF[collector_findings]
-  Web[Web Collector] --> CF
-  CF --> UI
-```
-
-Company Masterへの紐付け候補は表示しますが、表記ゆれだけで自動統合しません。ランキングは評価済み項目だけで計算し、充足率100%未満は「暫定」です。
-
-## Supabase / Google連携の現在地
-
-通常ログインはSupabase AuthのGoogle providerを使い、scopeはidentityだけです。Gmail/Drive scopeは要求しません。AppDataV2はrevision条件付きで保存し、別タブ/端末の更新は競合として停止します。Gmailは所有者専用Apps Scriptに分離し、CollectorはAppDataV2を直接更新しません。
-
-本番設定は[Live setup checklist](docs/LIVE_SETUP_CHECKLIST.md)、Collector運用は[Automated Job Hunt](docs/AUTOMATED_JOB_HUNT.md)と[Gmail Personal Collector](docs/GMAIL_PERSONAL_COLLECTOR.md)を参照してください。
-
-実GoogleアカウントでのOAuth/Drive接続は未実施です。Client ID作成、本人ログイン、2FAは利用者本人だけが行います。Billing、カード、課金trialは使いません。設定する場合は [Google認証セットアップ](docs/GOOGLE_AUTH_SETUP.md) を読み、実施時点の公式料金と画面を再確認してください。
-
-## AI SyncとWatchの境界
-
-現在の運用は次です。
-
-```text
-ChatGPT等で調査 → AiSyncEnvelopeV1 JSON → validation → 差分preview
-→ 利用者が個別承認 → Research Fact / Selection Event / Watch Findingへ保存
-```
-
-AI出力を読み込んだだけでは本データを変更しません。Gmail自動監視、Web定期巡回、有料AI API、バックグラウンドschedulerは未実装です。仕様は [AI Sync format](docs/09_AI_SYNC_FORMAT.md) と [Watch構成](docs/10_WATCH_ARCHITECTURE.md) にあります。
-
-## 技術
-
-- React 19 / TypeScript 5 / Vite 7 / pnpm 11
-- Zod 4による外部JSONのruntime validation
-- localStorage（明示的な開発モード）/ Google Drive REST境界
-- Google Identity Services Token model境界
-- Vitest / Testing Library / Playwright / ESLint / Git
-- 独自CSS（UI frameworkなし）
-
-React/Viteを維持し、FastAPI、PostgreSQL、Docker、Next.js、Firebase、有料APIは追加していません。今回の手動同期にはバックエンドが不要で、既存UIと履歴を守る費用対効果が高いためです。
-
-## 品質確認
+## Testing
 
 ```powershell
 pnpm run lint
-pnpm run build
 pnpm run test
-pnpm run test:e2e
+pnpm run build
+pnpm run test:collector
 ```
 
-2026-08-21の最終確認:
+## Future work
 
-- TypeScript: 成功
-- ESLint: 成功
-- production build: 成功
-- unit/component: 133件成功（26ファイル）
-- Microsoft Edge E2E: 従来8件＋Google/Driveモック1件、計9件成功
-- Google Auth/Drive: Mock/contractまで成功、実Googleアカウント未試験
+- 新規企業を追加したときの企業単位の Gmail 履歴確認フロー
+- Collector 実行履歴と stale warning の画面表示の拡充
+- 対象企業ごとの収集ルールを UI から調整する機能
 
-## 安全性
-
-- `.env`、token、password、Cookie、API key、個人データはGitへ入れない。
-- URLはhttp/httpsだけを受け付け、HTML文字列を直接挿入しない。
-- invalid JSONは現在データを変更しない。
-- v1移行前に原文を別keyへ退避し、旧keyも即削除しない。
-- Drive保存前にremoteのversionとAppData revisionを再確認し、差分時は自動上書きを止める。
-- Drive v3で原子的なETag条件更新を公式保証として確認できていないため、再確認からPATCHまでの競合窓は既知の限界として文書化する。
-- Windowsデスクトップ全体を撮影せず、Webアプリだけを架空データで撮影する。
-
-## 学習・ポートフォリオ資料
-
-- [読む順番](docs/00_START_HERE.md)
-- [要件](docs/01_REQUIREMENTS.md)
-- [構成](docs/02_ARCHITECTURE.md)
-- [v2データモデル](docs/07_DATA_MODEL_V2.md)
-- [開発証跡 Phase 0〜19](docs/evidence/INDEX.md)
-- [ポートフォリオ要約](docs/portfolio/PORTFOLIO_SUMMARY.md)
-- [面接ガイド](docs/portfolio/INTERVIEW_GUIDE.md)
-- [AI利用記録](docs/06_AI_USAGE.md)
-
-## 公開方針
-
-Phase 18では架空デモのbuildだけを公開しました。Phase 19ではユーザーの明示指示に基づき、監査済みsource/docsを公開repositoryの`source` branchへ追加し、GitHub ActionsがClient IDをRepository Variableからbuildへ渡す構成へ発展させます。本人用データ、access token、Client Secret、`.env.local`は公開しません。
-
-GitHub Pagesは公開repositoryで無料利用し、カード、Billing、有料プラン、カスタムドメインは設定していません。OAuth本番設定と実Google接続は引き続き未実施です。
+詳しい制作意図と面接向けの説明は [docs/PORTFOLIO_DESCRIPTION.md](docs/PORTFOLIO_DESCRIPTION.md) にまとめています。

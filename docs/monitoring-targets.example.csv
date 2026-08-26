@@ -1,0 +1,4 @@
+company_name,aliases,candidate_status,current_rank,official_recruit_url,recruit_entry_url,mypage_url,monitor_web,sender_domains,gmail_history_found,mypage_found,login_id_found,source_checked_at,notes,work_history_eligibility,eligibility_checked_at
+Northwind Analytics,Northwind;Northwind Analytics Inc,active,1,https://careers.example.test/northwind,https://careers.example.test/northwind/apply,,true,northwind.example.test,false,false,false,2026-08-01,架空のサンプル企業です,confirmed,2026-08-01
+Harbor Systems,Harbor Systems Ltd,watch,2,https://jobs.sample.test/harbor,,,true,harbor.sample.test,false,false,false,2026-08-01,要件を確認中の架空企業です,needs_review,2026-08-01
+Maple Studio,Maple Studio LLC,watch,3,https://recruit.demo.test/maple,,,false,maple.demo.test,false,false,false,2026-08-01,監視しない架空企業です,ineligible,2026-08-01
