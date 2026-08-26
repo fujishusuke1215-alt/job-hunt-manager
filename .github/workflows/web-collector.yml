@@ -20,7 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
-        with: { node-version: '22.x', cache: 'pnpm' }
+        with:
+          node-version: '22.x'
       - run: npm install --global pnpm@11.19.0 && pnpm install --frozen-lockfile
       - run: node tools/web-collector/run.mjs
         env:
