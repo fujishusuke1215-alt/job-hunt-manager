@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import type { AppDataV2, AppMode, SyncStatus } from '../domain/types'
 import { createAiAnalysisExport, createV2Backup } from '../domain/backup'
 import type { ImportPreview } from '../repositories/types'
+import type { CsvPreview } from '../services/monitoringCsv'
 
 interface DataToolsProps {
   mode: AppMode
@@ -10,6 +11,8 @@ interface DataToolsProps {
   syncStatus: SyncStatus
   onPreviewImport: (raw: string) => Promise<ImportPreview>
   onCommitImport: (preview: ImportPreview) => Promise<void>
+  onPreviewCsvImport?: (raw: string) => CsvPreview
+  onCommitCsvImport?: (preview: CsvPreview) => Promise<void>
   onClear: () => void
   onResetDemo: () => void
 }
@@ -31,6 +34,8 @@ export function DataTools({
   syncStatus,
   onPreviewImport,
   onCommitImport,
+  onPreviewCsvImport,
+  onCommitCsvImport,
   onClear,
   onResetDemo,
 }: DataToolsProps) {
@@ -40,6 +45,8 @@ export function DataTools({
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [isCommitting, setIsCommitting] = useState(false)
   const [includeNotes, setIncludeNotes] = useState(false)
+  const csvFileRef = useRef<HTMLInputElement>(null)
+  const [csvPreview, setCsvPreview] = useState<CsvPreview | null>(null)
 
   const exportData = () => {
     downloadJson(createV2Backup(data), `job-hunt-manager-backup-v2-${new Date().toISOString().slice(0, 10)}.json`)
@@ -94,6 +101,8 @@ export function DataTools({
       setMessage('本人用データを削除しました。')
     }
   }
+  const previewCsvFile = async (file: File) => { if(!onPreviewCsvImport)return; try { const next=onPreviewCsvImport(await file.text()); setCsvPreview(next); setIsError(false); setMessage(`${next.rows}行を確認しました。まだ取り込んでいません。`) } catch(error) { setCsvPreview(null); setIsError(true); setMessage(error instanceof Error ? error.message : 'CSVを検証できませんでした。') } finally { if(csvFileRef.current) csvFileRef.current.value='' } }
+  const commitCsvPreview = async () => { if(!csvPreview||!onCommitCsvImport)return; setIsCommitting(true); try { await onCommitCsvImport(csvPreview); setCsvPreview(null); setIsError(false); setMessage('CSVの候補企業を保存し、監視対象への同期を完了しました。') } catch(error) { setIsError(true); setMessage(error instanceof Error ? error.message : 'CSVを保存できませんでした。') } finally { setIsCommitting(false) } }
 
   return (
     <section className="page-stack" aria-labelledby="data-title">
@@ -111,10 +120,12 @@ export function DataTools({
           <div className="inline-actions"><button className="secondary-button" type="button" disabled={isCommitting} onClick={() => { setPreview(null); setMessage('取り込みをキャンセルしました。') }}>キャンセル</button><button className="primary-button" type="button" disabled={isCommitting} onClick={() => void commitPreview()}>{isCommitting ? '反映中…' : 'この内容を反映'}</button></div>
         </article>
       )}
+      {csvPreview && <article className="panel import-preview"><div><p className="eyebrow">CSV IMPORT PREVIEW</p><h2>初期投入前の確認</h2><p>{csvPreview.rows}行 / 現在: {data.userCompanies.length}社 → 取込後: {csvPreview.candidates.length}社</p>{csvPreview.warnings.map(warning => <p key={warning}>{warning}</p>)}<p>ランキング、選考、評価、承認済みFactは変更しません。</p></div><div className="inline-actions"><button className="secondary-button" type="button" disabled={isCommitting} onClick={()=>setCsvPreview(null)}>キャンセル</button><button className="primary-button" type="button" disabled={isCommitting} onClick={()=>void commitCsvPreview()}>{isCommitting?'反映中…':'この内容を初期投入'}</button></div></article>}
 
       <div className="data-card-grid">
         <article className="data-card"><span className="data-card-number">01</span><h2>バックアップを保存</h2><p>現在登録している企業・評価・選考情報を1つのファイルとして手元に保存します。PC変更時や万一に備えたバックアップとして利用できます。</p><button className="secondary-button" type="button" onClick={exportData}>バックアップファイルを保存</button><small>ファイル形式：JSON</small></article>
         <article className="data-card"><span className="data-card-number">02</span><h2>バックアップから復元</h2><p>以前Job Hunt Managerから保存したバックアップファイルを読み込み、企業・選考情報を復元します。</p><input aria-label="JSONを選ぶ" ref={fileRef} className="sr-only" id="backup-file" type="file" accept="application/json,.json" disabled={isCommitting} onChange={(event) => event.target.files?.[0] && void previewFile(event.target.files[0])} /><label className="secondary-button label-button" htmlFor="backup-file">バックアップファイルを選択</label></article>
+        {onPreviewCsvImport && onCommitCsvImport && <article className="data-card"><span className="data-card-number">CSV</span><h2>候補企業を初期投入</h2><p>Phase 0.6形式のCSVを確認してから取り込みます。認証情報を含むCSVは受け付けません。</p><input aria-label="CSVを選ぶ" ref={csvFileRef} className="sr-only" id="csv-file" type="file" accept="text/csv,.csv" disabled={isCommitting} onChange={(event) => event.target.files?.[0] && void previewCsvFile(event.target.files[0])} /><label className="secondary-button label-button" htmlFor="csv-file">CSVを選択</label></article>}
         <article className="data-card"><span className="data-card-number">03</span><h2>AI分析用</h2><p>ChatGPT等へ渡す構造化JSONです。既定では企業メモ・イベントメモ・選考場所を除きます。</p><label className="toggle-field"><input type="checkbox" checked={includeNotes} onChange={(event) => setIncludeNotes(event.target.checked)} /><span>個人メモ・選考場所も含める</span></label><button className="secondary-button" type="button" onClick={exportForAi}>AI分析用を書き出す</button></article>
         <article className="data-card caution"><span className="data-card-number">04</span><h2>{mode === 'demo' ? 'デモを初期化' : '本人用データを削除'}</h2><p>{mode === 'demo' ? '編集した架空データを初期状態へ戻します。' : 'バックアップがなければ復元できません。'}</p><button className={mode === 'demo' ? 'secondary-button' : 'danger-button'} type="button" onClick={mode === 'demo' ? onResetDemo : clearData}>{mode === 'demo' ? 'デモを初期化' : 'すべて削除'}</button></article>
       </div>

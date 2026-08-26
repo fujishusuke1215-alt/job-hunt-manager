@@ -8,7 +8,7 @@ import {
 } from './auth'
 
 describe('AuthProvider contract', () => {
-  it('identity 3 scopeとdrive.appdataだけをallowlistにする', () => {
+  it('通常loginはidentityと最小のDrive appData scopeだけをallowlistにする', () => {
     expect(GOOGLE_AUTH_SCOPES).toEqual([
       'openid',
       'email',
@@ -16,7 +16,7 @@ describe('AuthProvider contract', () => {
       'https://www.googleapis.com/auth/drive.appdata',
     ])
     expect(GOOGLE_AUTH_SCOPE).not.toContain('gmail')
-    expect(GOOGLE_AUTH_SCOPE).not.toContain('auth/drive ')
+    expect(GOOGLE_AUTH_SCOPE).toContain('auth/drive.appdata')
     expect(() => assertOnlyAllowedGoogleScopes(GOOGLE_AUTH_SCOPE)).not.toThrow()
     expect(() => assertOnlyAllowedGoogleScopes([
       'openid',

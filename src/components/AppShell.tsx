@@ -25,6 +25,7 @@ const navItems: { view: ViewName; label: string; short: string }[] = [
   { view: 'scoring', label: '評価設定', short: '評価' },
   { view: 'ai-sync', label: 'AIから取り込む', short: 'AI' },
   { view: 'watch', label: '更新・通知', short: '更新' },
+  { view: 'findings', label: '更新候補', short: '候補' },
   { view: 'data', label: 'データ管理', short: '保存' },
 ]
 
