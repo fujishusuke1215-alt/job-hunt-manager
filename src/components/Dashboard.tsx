@@ -4,6 +4,8 @@ import { rankCompanyViews } from '../domain/selectors'
 import { buildTodayActions } from '../domain/watch'
 import { deadlineTone, formatDeadlineLabel, getDaysUntil } from '../utils/deadlines'
 import type { CollectorStateSummary } from '../repositories/supabaseStorage'
+import type { CollectorFinding } from '../services/collectorFindings'
+import { collectorUrgencyLabel, urgentPendingCollectorFindings } from '../services/collectorUrgency'
 
 interface DashboardProps {
   companies: CompanyView[]
@@ -12,9 +14,11 @@ interface DashboardProps {
   onAddCompany: () => void
   onOpenWatch: () => void
   collectorStates?: CollectorStateSummary[]
+  collectorFindings?: CollectorFinding[]
+  onOpenCollectorFindings?: () => void
 }
 
-export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, onOpenWatch, collectorStates = [] }: DashboardProps) {
+export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, onOpenWatch, collectorStates = [], collectorFindings = [], onOpenCollectorFindings }: DashboardProps) {
   const activeCount = companies.filter((view) => !['検討中', '内定', '終了'].includes(view.company.applicationStatus)).length
   const waitingCount = companies.filter((view) => view.company.applicationStatus === '結果待ち').length
   const sevenDayCount = companies.flatMap((view) => view.company.events).filter((event) => {
@@ -33,6 +37,7 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
   const lastWebSuccess = webStates.map((state) => state.lastSuccess).filter((value): value is string => value !== null).sort().at(-1) ?? null
   const webFailures = webStates.filter((state) => state.failureCount > 0).length
   const webStale = !lastWebSuccess || Date.now() - new Date(lastWebSuccess).getTime() > 36 * 60 * 60 * 1000
+  const urgentCollectorFindings = urgentPendingCollectorFindings(collectorFindings)
 
   return (
     <section className="page-stack" aria-labelledby="dashboard-title">
@@ -46,6 +51,7 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
         <article className="metric-card"><span>選考中</span><strong>{activeCount}</strong><small>現在対応が必要な企業</small></article>
         <article className="metric-card"><span>新しいWatch</span><strong>{enabledFindings.filter((item) => item.status === 'new').length}</strong><small>承認後に保存された発見</small></article>
         <article className="metric-card"><span>7日以内・超過</span><strong>{sevenDayCount}</strong><small>完了前の予定</small></article>
+        <article className="metric-card"><span>未確認の新着</span><strong>{urgentCollectorFindings.length}</strong><small>正式データへ反映前の要確認候補</small></article>
       </div>
 
       {companies.length === 0 ? (
@@ -84,6 +90,20 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
                 if (count === 0) return null
                 return <div className="status-bar-row" key={status}><div><span>{status}</span><strong>{count}</strong></div><span className="status-track"><span style={{ width: `${(count / companies.length) * 100}%` }} /></span></div>
               })}
+            </div>
+          </article>
+
+          <article className="panel deadline-panel">
+            <div className="panel-heading compact"><div><p className="eyebrow">PENDING FINDINGS</p><h2>未確認の新着情報</h2></div><span className="panel-count">{urgentCollectorFindings.length}件</span></div>
+            <p className="panel-description">メール収集の候補です。正式な選考・締切には反映せず、内容を確認してから承認します。</p>
+            <div className="deadline-list">
+              {urgentCollectorFindings.length === 0 ? <p className="muted-message">期限・面接・テスト等の未確認候補はありません。</p> : urgentCollectorFindings.slice(0, 5).map((finding) => (
+                <button className="deadline-row" type="button" key={finding.id} onClick={onOpenCollectorFindings}>
+                  <span className="deadline-date soon"><strong>!</strong><small>CHECK</small></span>
+                  <span className="deadline-copy"><strong>{collectorUrgencyLabel(finding.findingType)}</strong><small>{finding.evidenceExcerpt}</small></span>
+                  <span className="deadline-badge soon">未確認</span>
+                </button>
+              ))}
             </div>
           </article>
 

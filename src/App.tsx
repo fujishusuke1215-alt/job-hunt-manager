@@ -713,7 +713,7 @@ export default function App() {
           </section>
         ) : (
           <>
-            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} />}
+            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} collectorFindings={collectorFindings} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} onOpenCollectorFindings={() => setView('findings')} />}
             {view === 'companies' && <CompanyList companies={companyViews} filters={filters} onFiltersChange={setFilters} onOpen={openCompany} onEdit={(companyId) => setFormState({ kind: 'edit', companyId })} onDelete={deleteCompany} onAdd={() => setFormState({ kind: 'add' })} />}
             {view === 'scoring' && <ScoringSettings data={data} onChange={commitData} />}
             {view === 'ai-sync' && <AiSync data={data} catalog={catalog} onChange={commitData} />}
