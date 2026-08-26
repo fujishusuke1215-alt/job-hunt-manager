@@ -17,5 +17,10 @@ Deno.serve(async (request) => {
   const rows = body.findings.map((f: Record<string, unknown>) => ({ ...f, user_id: owner, source_type: type, evidence_excerpt: String(f.evidence_excerpt ?? '').slice(0, 800), fingerprint: String(f.fingerprint ?? '') })).filter((f: { fingerprint: string }) => f.fingerprint)
   const { error } = await admin.from('collector_findings').upsert(rows, { onConflict: 'user_id,fingerprint', ignoreDuplicates: true })
   if (error) return new Response('ingest failed', { status: 500 })
-  return Response.json({ accepted: rows.length })
+  // Daily collectors only write proposals. The database function resolves known
+  // companies and advances only explicit, high-confidence facts; ambiguous data
+  // remains in the review inbox.
+  const { data: triage, error: triageError } = await admin.rpc('auto_triage_collector_findings', { p_user_id: owner, p_limit: 500 })
+  if (triageError) return new Response('triage failed', { status: 500 })
+  return Response.json({ accepted: rows.length, triage: Array.isArray(triage) ? triage[0] ?? null : triage })
 })
