@@ -4,7 +4,7 @@ import { createDemoCompanies } from '../data/demoData'
 import { createDemoAppData } from '../data/demoDataV2'
 import { createImportPreview } from '../repositories/types'
 import { createEmptyAppData, migrateV1Companies } from './migration'
-import { catalogDataSchema, safeParseAppDataV2 } from './schemas'
+import { catalogDataSchema, parseAppDataV2, safeParseAppDataV2 } from './schemas'
 import type { AppDataV2 } from './types'
 
 const NOW = '2026-08-21T00:00:00.000Z'
@@ -230,6 +230,29 @@ describe('AppDataV2 runtime integrity', () => {
 
     expect(() => createImportPreview(JSON.stringify(invalid), NOW)).toThrow('現在のデータは変更していません')
     expect(current).toEqual(before)
+  })
+
+  it('legacy source datetimeを読み込み境界でcanonical ISOへ正規化する', () => {
+    const legacy = richAppData()
+    legacy.watchFindings[0].source = {
+      id: 'source_legacy', type: 'email', title: 'legacy', url: null,
+      retrievedAt: '2026-08-26 12:34:13+00',
+      publishedAt: '2026-08-26 12:34:13+00', note: '',
+    }
+    const parsed = parseAppDataV2(legacy)
+    expect(parsed.watchFindings[0].source?.publishedAt).toBe('2026-08-26T12:34:13.000Z')
+    expect(parsed.watchFindings[0].source?.retrievedAt).toBe('2026-08-26T12:34:13.000Z')
+  })
+
+  it('invalid optional legacy source datetime is isolated as null', () => {
+    const legacy = richAppData()
+    legacy.watchFindings[0].source = {
+      id: 'source_invalid', type: 'email', title: 'legacy', url: null,
+      retrievedAt: 'not a date', publishedAt: 'timezone unknown', note: '',
+    }
+    const parsed = parseAppDataV2(legacy)
+    expect(parsed.watchFindings[0].source?.publishedAt).toBeNull()
+    expect(parsed.watchFindings[0].source?.retrievedAt).toBeNull()
   })
 })
 

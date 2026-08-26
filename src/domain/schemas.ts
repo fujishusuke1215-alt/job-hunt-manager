@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { canonicalIsoDateTime } from './dateTime'
 import {
   applicationStatuses,
   closeReasons,
@@ -494,10 +495,48 @@ export const appDataV2Schema = z.object({
   })
 })
 
+type UnknownRecord = Record<string, unknown>
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * AppDataV2 remains strict. This boundary upgrades legacy PostgreSQL
+ * timestamptz text before it is embedded in an optional source field.
+ * A value with no known timezone becomes null instead of being guessed.
+ */
+export function normalizeAppDataV2DateTimes(input: unknown): unknown {
+  if (!isRecord(input)) return input
+  const normalized = structuredClone(input)
+  const normalizeOptionalTimestamp = (record: UnknownRecord, key: string) => {
+    if (typeof record[key] === 'string') record[key] = canonicalIsoDateTime(record[key])
+  }
+  const normalizeSource = (source: unknown) => {
+    if (!isRecord(source)) return
+    normalizeOptionalTimestamp(source, 'retrievedAt')
+    normalizeOptionalTimestamp(source, 'publishedAt')
+  }
+
+  if (Array.isArray(normalized.researchFacts)) {
+    normalized.researchFacts.forEach((fact) => {
+      if (isRecord(fact) && Array.isArray(fact.sources)) fact.sources.forEach(normalizeSource)
+    })
+  }
+  if (Array.isArray(normalized.watchFindings)) {
+    normalized.watchFindings.forEach((finding) => {
+      if (!isRecord(finding)) return
+      normalizeOptionalTimestamp(finding, 'deadline')
+      normalizeSource(finding.source)
+    })
+  }
+  return normalized
+}
+
 export function parseAppDataV2(input: unknown) {
-  return appDataV2Schema.parse(input)
+  return appDataV2Schema.parse(normalizeAppDataV2DateTimes(input))
 }
 
 export function safeParseAppDataV2(input: unknown) {
-  return appDataV2Schema.safeParse(input)
+  return appDataV2Schema.safeParse(normalizeAppDataV2DateTimes(input))
 }

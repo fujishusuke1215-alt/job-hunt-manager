@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { canonicalIsoDateTime } from '../domain/dateTime'
 import { parseAppDataV2 } from '../domain/schemas'
 import type { AppDataV2 } from '../domain/types'
 import type { CollectorFinding } from '../services/collectorFindings'
@@ -65,7 +66,7 @@ export class SupabaseStorageRepository implements StorageRepository {
   async loadCollectorFindings(): Promise<CollectorFinding[]> {
     const { data, error } = await this.client.from('collector_findings').select('*').eq('user_id', this.userId).in('status', ['new', 'needs_review']).order('observed_at', { ascending: false })
     if (error) throw this.error(error.message)
-    return (data ?? []).map((row: Record<string, unknown>) => ({ id: String(row.id), company: typeof row.company === 'string' ? row.company : null, findingType: String(row.finding_type), payload: (row.payload ?? {}) as Record<string, unknown>, sourceType: row.source_type as CollectorFinding['sourceType'], sourceExternalId: typeof row.source_external_id === 'string' ? row.source_external_id : null, sourceUrl: typeof row.source_url === 'string' ? row.source_url : null, sourceTimestamp: typeof row.source_timestamp === 'string' ? row.source_timestamp : null, observedAt: String(row.observed_at), confidence: Number(row.confidence), evidenceExcerpt: String(row.evidence_excerpt), fingerprint: String(row.fingerprint), status: row.status as CollectorFinding['status'], reviewReason: typeof row.review_reason === 'string' ? row.review_reason : null }))
+    return (data ?? []).map((row: Record<string, unknown>) => ({ id: String(row.id), company: typeof row.company === 'string' ? row.company : null, findingType: String(row.finding_type), payload: (row.payload ?? {}) as Record<string, unknown>, sourceType: row.source_type as CollectorFinding['sourceType'], sourceExternalId: typeof row.source_external_id === 'string' ? row.source_external_id : null, sourceUrl: typeof row.source_url === 'string' ? row.source_url : null, sourceTimestamp: canonicalIsoDateTime(row.source_timestamp), observedAt: String(row.observed_at), confidence: Number(row.confidence), evidenceExcerpt: String(row.evidence_excerpt), fingerprint: String(row.fingerprint), status: row.status as CollectorFinding['status'], reviewReason: typeof row.review_reason === 'string' ? row.review_reason : null }))
   }
   async loadCollectorStates(): Promise<CollectorStateSummary[]> {
     const { data, error } = await this.client.from('collector_state').select('collector_type,last_attempt,last_success,failure_count,last_error_category').eq('user_id', this.userId)
