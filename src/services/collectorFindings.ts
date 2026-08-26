@@ -3,7 +3,8 @@ import { canonicalIsoDateTime } from '../domain/dateTime'
 import { createId } from '../utils/id'
 
 export type CollectorFindingStatus = 'new' | 'needs_review' | 'approved' | 'rejected' | 'superseded'
-export interface CollectorFinding { id: string; company: string | null; findingType: string; payload: Record<string, unknown>; sourceType: 'gmail' | 'web' | 'manual'; sourceExternalId: string | null; sourceUrl: string | null; sourceTimestamp: string | null; observedAt: string; confidence: number; evidenceExcerpt: string; fingerprint: string; status: CollectorFindingStatus; reviewReason: string | null }
+export type CollectorTriageAction = 'auto_matched' | 'auto_approved' | 'auto_archived' | 'manual_review'
+export interface CollectorFinding { id: string; company: string | null; findingType: string; payload: Record<string, unknown>; sourceType: 'gmail' | 'web' | 'manual'; sourceExternalId: string | null; sourceUrl: string | null; sourceTimestamp: string | null; observedAt: string; confidence: number; evidenceExcerpt: string; fingerprint: string; status: CollectorFindingStatus; reviewReason: string | null; triageAction?: CollectorTriageAction | null; triageReason?: string | null; triageConfidence?: number | null }
 
 const typeMap: Record<string, WatchFindingType> = { deadline: 'application_deadline', selection_event: 'other', test: 'web_test', interview: 'interview', application_open: 'recruitment_started', result_notice: 'result', eligibility_review_required: 'eligibility_changed' }
 function isoDateTime(value: string | null | undefined, fallback: string): string {
