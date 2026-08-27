@@ -613,7 +613,9 @@ export default function App() {
     }, now)
     commitData(nextData)
     if (repositoryRef.current instanceof SupabaseStorageRepository) {
-      void repositoryRef.current.syncMonitoringTargets(syncMonitoringTargetsFromCandidates(nextData.userCompanies, []).targets).catch((error: unknown) => setPersonalSyncMessage(error instanceof Error ? error.message : '監視対象の同期に失敗しました。'))
+      void repositoryRef.current.syncMonitoringTargets(syncMonitoringTargetsFromCandidates(nextData.userCompanies, []).targets)
+        .then(() => currentCompany ? undefined : repositoryRef.current instanceof SupabaseStorageRepository ? repositoryRef.current.queueLimitedGmailBackfill(companyId) : undefined)
+        .catch((error: unknown) => setPersonalSyncMessage(error instanceof Error ? error.message : '監視対象または限定Gmail確認の登録に失敗しました。'))
     }
     setFormState(null)
     setView('companies')

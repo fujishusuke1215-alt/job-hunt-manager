@@ -58,6 +58,18 @@ export const selectionEventSchema = z.object({
   status: z.enum(eventStatuses),
   location: z.string(),
   memo: z.string(),
+  autoActionType: z.string().nullable().optional(),
+  dueAt: nullableDateSchema.optional(),
+  startsAt: nullableDateSchema.optional(),
+  endsAt: nullableDateSchema.optional(),
+  sourceMessageId: z.string().nullable().optional(),
+  sourceThreadId: z.string().nullable().optional(),
+  sourceSubject: z.string().nullable().optional(),
+  sourceUrl: nullableSafeUrlSchema.optional(),
+  evidenceExcerpt: z.string().max(800).nullable().optional(),
+  myPageUrl: nullableSafeUrlSchema.optional(),
+  autoProcessed: z.boolean().optional(),
+  confidence: z.number().min(0).max(1).nullable().optional(),
 }).strict()
 
 export const masterCompanySchema = z.object({

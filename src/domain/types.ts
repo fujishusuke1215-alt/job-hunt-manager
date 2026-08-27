@@ -117,6 +117,18 @@ export interface SelectionEvent {
   status: SelectionEventStatus
   location: string
   memo: string
+  autoActionType?: string | null
+  dueAt?: string | null
+  startsAt?: string | null
+  endsAt?: string | null
+  sourceMessageId?: string | null
+  sourceThreadId?: string | null
+  sourceSubject?: string | null
+  sourceUrl?: string | null
+  evidenceExcerpt?: string | null
+  myPageUrl?: string | null
+  autoProcessed?: boolean
+  confidence?: number | null
 }
 
 export interface MasterCompany {

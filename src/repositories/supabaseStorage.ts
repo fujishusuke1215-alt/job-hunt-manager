@@ -62,6 +62,10 @@ export class SupabaseStorageRepository implements StorageRepository {
     const { error } = await this.client.rpc('sync_monitoring_targets', { targets: rows })
     if (error) throw this.error(error.message)
   }
+  async queueLimitedGmailBackfill(candidateCompanyId: string): Promise<void> {
+    const { error } = await this.client.rpc('queue_gmail_backfill', { p_candidate_company_id: candidateCompanyId })
+    if (error) throw this.error(error.message)
+  }
 
   async loadCollectorFindings(): Promise<CollectorFinding[]> {
     const { data, error } = await this.client.from('collector_findings').select('*').eq('user_id', this.userId).order('observed_at', { ascending: false }).limit(500)

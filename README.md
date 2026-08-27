@@ -16,7 +16,9 @@
 
 - Google Login とユーザー単位で分離されたデータ保存
 - 企業、選考イベント、締切、評価、Research Fact の管理
-- 今日の要対応、直近7日、日程競合を確認するダッシュボード
+- Gmail本文から期限・面接日時・対応種別を解析し、根拠付きActionとして自動反映
+- 今日の要対応、直近7日、日程競合と企業評価の比較を確認するダッシュボード
+- ActionからMyPageと元Gmail検索を直接開く導線
 - 評価項目と重み付けを変更できるランキング
 - CSV の preview / validation を経由した候補企業と監視対象の初期登録
 - Collector evidence の企業解決、自動処理、重複防止、監査ログ
@@ -45,7 +47,7 @@ flowchart LR
   ACTIONS --> DATA
 ```
 
-Collector evidence は内部監査ログとして保持し、日常画面で1件ずつ承認する運用にはしません。明白な事実だけを選考履歴・予定へ反映し、fingerprint と状態管理で重複を抑制しています。
+Collector evidence は内部監査ログとして保持し、日常画面で1件ずつ承認する運用にはしません。明白な期限、Webテスト、面接予約、提出・完了、合否だけを根拠付きAction／選考履歴へ反映し、fingerprint とAction種別・日時で重複を抑制しています。添付の有無だけで本文解析を止めず、曖昧な通知のみ例外として残します。
 
 ## Security / Privacy
 
@@ -53,7 +55,8 @@ Collector evidence は内部監査ログとして保持し、日常画面で1件
 - Demo はログイン済みデータと分離し、架空データのみを表示
 - service role、OAuth secret、collector token、Gmail token はブラウザやリポジトリに置かない
 - 個人用の監視 CSV と MyPage 用 private CSV は Git 管理から除外
-- Gmail は本文全文や password、認証コードを正式データとして保存しない
+- Gmail は本文全文や password、認証コードを正式データとして保存しない。必要最小限の根拠抜粋、メッセージ識別子、Gmail検索リンクだけを保持する
+- MyPage Login ID は本人用RLSテーブルのみに保存し、passwordは保存しない
 - GitHub Actions は secret を workflow の安全な実行コンテキストでのみ参照
 
 公開用の CSV 例は [docs/monitoring-targets.example.csv](docs/monitoring-targets.example.csv) を参照してください。全行が架空の企業と URL です。
@@ -86,9 +89,8 @@ pnpm run build
 pnpm run test:collector
 ```
 
-## Future work
+## Owner automation flow
 
-- 新規企業を追加したときの企業単位の Gmail 履歴確認フロー
-- 対象企業ごとの収集ルールを UI から調整する機能
+新しい企業を保存すると監視対象が同期され、企業名・別名・送信元ドメインに絞ったGmail backfill requestをキューへ登録できます。Owner Apps Scriptの日次処理がキューを消化するため、ブラウザからGmail Restricted APIを呼びません。既存Findingを再処理する前には本人DBのバックアップを取得し、公開リポジトリには含めません。
 
 詳しい制作意図と面接向けの説明は [docs/PORTFOLIO_DESCRIPTION.md](docs/PORTFOLIO_DESCRIPTION.md) にまとめています。

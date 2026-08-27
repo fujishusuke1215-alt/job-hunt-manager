@@ -6,6 +6,7 @@ import { deadlineTone, formatDeadlineLabel, getDaysUntil } from '../utils/deadli
 import type { CollectorStateSummary } from '../repositories/supabaseStorage'
 import type { CollectorFinding } from '../services/collectorFindings'
 import { collectorUrgencyLabel, urgentPendingCollectorFindings } from '../services/collectorUrgency'
+import { detectScheduleConflicts } from '../domain/scheduleConflicts'
 
 interface DashboardProps {
   companies: CompanyView[]
@@ -33,11 +34,13 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
     companyScores: Object.fromEntries(companies.map((view) => [view.company.id, view.score.score])),
   })
   const topCompanies = rankCompanyViews(companies).slice(0, 4)
+  const rankByCompanyId = new Map(rankCompanyViews(companies).map((view) => [view.company.id, view.rank]))
   const webStates = collectorStates.filter((state) => state.collectorType === 'web')
   const lastWebSuccess = webStates.map((state) => state.lastSuccess).filter((value): value is string => value !== null).sort().at(-1) ?? null
   const webFailures = webStates.filter((state) => state.failureCount > 0).length
   const webStale = !lastWebSuccess || Date.now() - new Date(lastWebSuccess).getTime() > 36 * 60 * 60 * 1000
   const urgentCollectorFindings = urgentPendingCollectorFindings(collectorFindings)
+  const conflicts = detectScheduleConflicts(companies)
 
   return (
     <section className="page-stack" aria-labelledby="dashboard-title">
@@ -63,14 +66,23 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
             <p className="panel-description">超過 → 24時間 → 3日 → 7日 → Watch重要度。同条件だけ適合度を使います。</p>
             <div className="deadline-list">
               {actions.length === 0 ? <p className="muted-message">未完了の予定・Watchはありません。</p> : actions.slice(0, 8).map((item) => (
-                <button className="deadline-row" type="button" key={item.id} onClick={() => item.source === 'watch_finding' ? onOpenWatch() : onOpenCompany(item.userCompanyId)}>
+                <div className="deadline-row-wrap" key={item.id}><button className="deadline-row" type="button" onClick={() => item.source === 'watch_finding' ? onOpenWatch() : onOpenCompany(item.userCompanyId)}>
                   <span className={`deadline-date ${item.deadline ? deadlineTone(item.deadline) : ''}`}><strong>{item.source === 'watch_finding' ? 'W' : new Date(item.deadline ?? '').getDate()}</strong><small>{item.source === 'watch_finding' ? 'WATCH' : new Date(item.deadline ?? '').toLocaleDateString('ja-JP', { month: 'short' })}</small></span>
                   <span className="deadline-copy"><strong>{item.companyName}</strong><small>{item.title}</small></span>
                   <span className={`deadline-badge ${item.deadline ? deadlineTone(item.deadline) : ''}`}>{item.deadline ? formatDeadlineLabel(item.deadline) : `Watch ${item.severity}`}</span>
-                </button>
+                </button>{item.source === 'selection_event' && (item.myPageUrl || item.sourceUrl) && <span className="action-source-links">{item.myPageUrl && <a href={item.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span>}</div>
               ))}
             </div>
           </article>
+
+          {conflicts.length > 0 && <article className="panel deadline-panel conflict-panel">
+            <div className="panel-heading"><div><p className="eyebrow">SCHEDULE CONFLICTS</p><h2>日程の重複</h2></div><span className="panel-count">{conflicts.length}件</span></div>
+            <p className="panel-description">自動で選考を辞退せず、日程と評価を比較できるようにしています。</p>
+            <div className="conflict-list">{conflicts.map((conflict) => <article className="conflict-card" key={`${conflict.left.event.id}:${conflict.right.event.id}`}>
+              <strong>{conflict.kind === 'confirmed' ? '日程重複' : '日程重複の可能性'}</strong><small>{new Date(conflict.left.event.startsAt ?? conflict.left.event.scheduledAt).toLocaleString('ja-JP')}</small>
+              <div className="conflict-comparison">{[conflict.left, conflict.right].map(({ company, event }) => <button type="button" key={event.id} onClick={() => onOpenCompany(company.company.id)}><span>{company.displayName}</span><strong>{rankByCompanyId.get(company.company.id) ? `${rankByCompanyId.get(company.company.id)}位` : '順位外'} / {company.score.score === null ? '未評価' : `${company.score.score.toFixed(1)}点`}</strong><small>{selectionLabel(company.company)} · 評価充足率 {company.score.coverage}%</small></button>)}</div>
+            </article>)}</div>
+          </article>}
 
           <article className="panel ranking-panel">
             <div className="panel-heading"><div><p className="eyebrow">FIT RANKING</p><h2>企業適合度</h2></div></div>

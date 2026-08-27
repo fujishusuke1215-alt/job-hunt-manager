@@ -132,6 +132,15 @@ a { color: inherit; }
 .deadline-row { display: grid; grid-template-columns: 54px minmax(0,1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 12px 10px; border: 0; border-bottom: 1px solid #eef1f3; background: transparent; text-align: left; }
 .deadline-row:last-child { border-bottom: 0; }
 .deadline-row:hover { background: #f7f9fa; }
+.deadline-row-wrap { border-bottom: 1px solid #eef1f3; }
+.deadline-row-wrap .deadline-row { border-bottom: 0; }
+.action-source-links { display: flex; gap: 12px; padding: 0 10px 10px 78px; font-size: 12px; }
+.conflict-list { display: grid; gap: 10px; }
+.conflict-card { border: 1px solid #f0d8c6; border-radius: 10px; padding: 12px; display: grid; gap: 6px; }
+.conflict-card > small { color: var(--muted); }
+.conflict-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.conflict-comparison button { text-align: left; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; display: grid; gap: 3px; }
+.conflict-comparison small { color: var(--muted); }
 .deadline-date { display: grid; place-items: center; align-content: center; width: 50px; height: 50px; border-radius: 9px; color: var(--navy); background: var(--navy-soft); }
 .deadline-date.soon { color: #81500d; background: var(--amber-soft); }
 .deadline-date.overdue { color: #8f3434; background: var(--red-soft); }
@@ -433,6 +442,8 @@ legend small { color: var(--muted); font-weight: 500; }
   .page-heading h1 { font-size: 31px; }
   .metric-grid { gap: 9px; }
   .metric-card { min-height: 122px; padding: 17px; }
+  .conflict-comparison { grid-template-columns: 1fr; }
+  .action-source-links { padding-left: 10px; flex-wrap: wrap; }
   .filter-panel { grid-template-columns: 1fr 1fr; }
   .search-field { grid-column: span 2; }
   .company-grid { grid-template-columns: 1fr; }

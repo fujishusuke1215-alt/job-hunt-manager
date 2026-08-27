@@ -33,6 +33,9 @@ export interface TodayAction {
   deadline: string | null
   severity: WatchSeverity
   companyScore: number | null
+  sourceUrl?: string | null
+  myPageUrl?: string | null
+  sourceSubject?: string | null
 }
 
 export interface RankedTodayAction extends TodayAction {
@@ -219,9 +222,12 @@ function selectionEventToAction(
     userCompanyId: company.id,
     companyName,
     title: event.title || event.type,
-    deadline: event.scheduledAt || null,
+    deadline: (event.dueAt ?? event.startsAt ?? event.scheduledAt) || null,
     severity: 'medium',
     companyScore,
+    sourceUrl: event.sourceUrl,
+    myPageUrl: event.myPageUrl,
+    sourceSubject: event.sourceSubject,
   }
 }
 

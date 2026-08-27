@@ -122,7 +122,7 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
               {[...company.events].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()).map((event) => (
                 <article className="event-row" key={event.id}>
                   <div className={`event-date ${deadlineTone(event.scheduledAt)}`}><strong>{new Date(event.scheduledAt).getDate()}</strong><span>{new Date(event.scheduledAt).toLocaleDateString('ja-JP', { month: 'short' })}</span></div>
-                  <div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(event.scheduledAt).toLocaleString('ja-JP')} {event.location && `· ${event.location}`}</p>{event.memo && <small>{event.memo}</small>}</div>
+                  <div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(event.scheduledAt).toLocaleString('ja-JP')} {event.location && `· ${event.location}`}</p>{event.memo && <small>{event.memo}</small>}<span className="action-source-links detail-action-links">{event.myPageUrl && <a href={event.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{event.sourceUrl && <a href={event.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span></div>
                   <div className="event-actions"><strong className={deadlineTone(event.scheduledAt)}>{formatDeadlineLabel(event.scheduledAt)}</strong><button type="button" onClick={() => startEdit(event)}>編集</button><button className="danger-link" type="button" onClick={() => deleteEvent(event.id)}>削除</button></div>
                 </article>
               ))}
