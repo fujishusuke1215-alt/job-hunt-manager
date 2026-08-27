@@ -49,7 +49,7 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
       <div className="metric-grid">
         <article className="metric-card featured"><span>登録企業</span><strong>{companies.length}</strong><small>比較対象を含む全企業</small></article>
         <article className="metric-card"><span>選考中</span><strong>{activeCount}</strong><small>現在対応が必要な企業</small></article>
-        <article className="metric-card"><span>新しいWatch</span><strong>{enabledFindings.filter((item) => item.status === 'new').length}</strong><small>承認後に保存された発見</small></article>
+        <article className="metric-card"><span>自動整理済み</span><strong>{collectorFindings.filter((item) => item.triageAction === 'auto_matched' || item.triageAction === 'auto_approved').length}</strong><small>メール・Webの自動処理結果</small></article>
         <article className="metric-card"><span>7日以内・超過</span><strong>{sevenDayCount}</strong><small>完了前の予定</small></article>
         <article className="metric-card"><span>未確認の新着</span><strong>{urgentCollectorFindings.length}</strong><small>正式データへ反映前の要確認候補</small></article>
       </div>
@@ -95,7 +95,7 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
 
           <article className="panel deadline-panel">
             <div className="panel-heading compact"><div><p className="eyebrow">PENDING FINDINGS</p><h2>未確認の新着情報</h2></div><span className="panel-count">{urgentCollectorFindings.length}件</span></div>
-            <p className="panel-description">メール収集の候補です。正式な選考・締切には反映せず、内容を確認してから承認します。</p>
+            <p className="panel-description">自動処理できなかった例外だけを表示します。明白な企業・完了通知は自動反映されます。</p>
             <div className="deadline-list">
               {urgentCollectorFindings.length === 0 ? <p className="muted-message">期限・面接・テスト等の未確認候補はありません。</p> : urgentCollectorFindings.slice(0, 5).map((finding) => (
                 <button className="deadline-row" type="button" key={finding.id} onClick={onOpenCollectorFindings}>

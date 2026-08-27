@@ -22,11 +22,8 @@ interface AppShellProps {
 const navItems: { view: ViewName; label: string; short: string }[] = [
   { view: 'dashboard', label: 'ホーム', short: '概要' },
   { view: 'companies', label: '企業・選考', short: '企業' },
-  { view: 'scoring', label: '評価設定', short: '評価' },
-  { view: 'ai-sync', label: 'AIから取り込む', short: 'AI' },
-  { view: 'watch', label: '更新・通知', short: '更新' },
-  { view: 'findings', label: '更新候補', short: '候補' },
-  { view: 'data', label: 'データ管理', short: '保存' },
+  { view: 'scoring', label: 'ランキング', short: '順位' },
+  { view: 'data', label: '設定・履歴', short: '設定' },
 ]
 
 const syncLabels: Record<SyncStatus, string> = {
