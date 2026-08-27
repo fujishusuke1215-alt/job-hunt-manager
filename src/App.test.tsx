@@ -163,7 +163,7 @@ describe('Job Hunt Manager', () => {
 
     await user.click(screen.getByRole('button', { name: '本人用' }))
     await screen.findByText('保存先は空です。最初の保存で新規作成します。')
-    await user.click(screen.getByRole('button', { name: 'データ管理' }))
+    await user.click(screen.getByRole('button', { name: '設定・履歴' }))
     await user.upload(screen.getByLabelText('JSONを選ぶ'), backupFile(raw))
 
     expect(await screen.findByRole('heading', { name: '取り込み前の確認' })).toBeInTheDocument()
@@ -190,7 +190,7 @@ describe('Job Hunt Manager', () => {
 
     await user.click(screen.getByRole('button', { name: '本人用' }))
     await screen.findByText(/4社を読み込みました/)
-    await user.click(screen.getByRole('button', { name: 'データ管理' }))
+    await user.click(screen.getByRole('button', { name: '設定・履歴' }))
     await user.upload(screen.getByLabelText('JSONを選ぶ'), backupFile(legacyRaw))
     await screen.findByRole('heading', { name: '取り込み前の確認' })
 
