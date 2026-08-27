@@ -22,7 +22,9 @@ Deno.serve(async (request) => {
   // remains in the review inbox.
   const { data: triage, error: triageError } = await admin.rpc('auto_triage_collector_findings', { p_user_id: owner, p_limit: 500 })
   if (triageError) return new Response('triage failed', { status: 500 })
+  const { data: confirmed, error: confirmedError } = await admin.rpc('auto_confirm_matched_collector_findings', { p_user_id: owner, p_limit: 500 })
+  if (confirmedError) return new Response('notification confirmation failed', { status: 500 })
   const { data: events, error: eventsError } = await admin.rpc('apply_auto_collector_events', { p_user_id: owner, p_limit: 500 })
   if (eventsError) return new Response('event reflection failed', { status: 500 })
-  return Response.json({ accepted: rows.length, triage: Array.isArray(triage) ? triage[0] ?? null : triage, events: Array.isArray(events) ? events[0] ?? null : events })
+  return Response.json({ accepted: rows.length, triage: Array.isArray(triage) ? triage[0] ?? null : triage, confirmed: Array.isArray(confirmed) ? confirmed[0] ?? null : confirmed, events: Array.isArray(events) ? events[0] ?? null : events })
 })
