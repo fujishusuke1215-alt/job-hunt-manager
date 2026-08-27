@@ -54,6 +54,7 @@ begin
       coalesce(r.next_confidence = r.confidence and r.next_name_length = length(r.canonical_name), false) as is_ambiguous,
       case when coalesce(r.next_confidence = r.confidence and r.next_name_length = length(r.canonical_name),false) then 'manual_review'
            when r.confidence >= .9 and (coalesce(p.payload->>'subject',p.evidence_excerpt) ~ '(エントリー|応募).{0,12}(受付|受け付け|ありがとう|完了)|エントリーありがとうございます') then 'auto_approved'
+           when r.confidence >= .9 and p.finding_type = 'deadline' and coalesce(p.payload->>'deadline','') ~ '^\\d{4}-\\d{2}-\\d{2}T' then 'auto_approved'
            when r.confidence >= .9 and coalesce(p.payload->>'subject',p.evidence_excerpt) ~ '(メルマガ|ニュースレター|採用コンテンツ|業界研究|コラム)' then 'auto_archived'
            else 'manual_review' end as action,
       case when coalesce(r.next_confidence = r.confidence and r.next_name_length = length(r.canonical_name),false) then 'ambiguous_company_match'
