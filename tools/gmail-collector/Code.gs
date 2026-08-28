@@ -1,4 +1,4 @@
-/* Owner-only Gmail collector. Configure INGEST_URL, COLLECTOR_TOKEN, BACKFILL_SINCE. */
+/* Owner-only Gmail collector. Configure INGEST_URL, COLLECTOR_TOKEN, BACKFILL_SINCE, and GMAIL_ACCOUNT_INDEX. */
 const JST = 'Asia/Tokyo';
 function runInitialBackfill() { return runCollector_(true); }
 function runDailyIncremental() { runCollector_(false); runQueuedCompanyBackfills_(); }
@@ -54,10 +54,20 @@ function parseDateTime_(text, receivedAt) {
 function pad_(n) { return String(n).padStart(2,'0'); }
 function toFinding_(message, now) {
   const heads=Object.fromEntries((message.payload.headers||[]).map(h=>[h.name.toLowerCase(),h.value])), subject=heads.subject||'', text=extractText_(message.payload), all=subject+'\n'+text, receivedAt=new Date(Number(message.internalDate)).toISOString(), type=classify_(all), actionType=actionType_(type), parsed=parseDateTime_(all,receivedAt), urls=(text.match(/https?:\/\/[^\s<>"']+/g)||[]).slice(0,10);
-  const due=/deadline|required|reservation|document/.test(actionType||'')&&parsed?(parsed.at||new Date(`${parsed.date}T23:59:00+09:00`).toISOString()):null, starts=/scheduled|invitation/.test(actionType||'')&&parsed?.at?parsed.at:null, sender=heads.from||'', search=`https://mail.google.com/mail/u/0/#search/${encodeURIComponent(`from:(${sender.match(/<([^>]+)>/)?.[1]||sender}) subject:(${subject.replace(/"/g,'').slice(0,120)})`)}`, myPageUrl=urls.find(url=>/^https:\/\//i.test(url)&&/mypage|my-page|entry|recruit|career/i.test(url)&&/マイページ|MyPage|ログイン|採用/i.test(all))||null;
+  const due=/deadline|required|reservation|document/i.test(actionType||'')&&parsed?(parsed.at||new Date(`${parsed.date}T23:59:00+09:00`).toISOString()):null, starts=/scheduled|invitation/i.test(actionType||'')&&parsed?.at?parsed.at:null, sender=heads.from||'', gmailAccountIndex=PropertiesService.getScriptProperties().getProperty('GMAIL_ACCOUNT_INDEX')||'0', search=`https://mail.google.com/mail/u/${encodeURIComponent(gmailAccountIndex)}/#search/${encodeURIComponent(`from:(${sender.match(/<([^>]+)>/)?.[1]||sender}) subject:(${subject.replace(/"/g,'').slice(0,120)})`)}`, myPageUrl=urls.find(url=>/^https:\/\//i.test(url)&&/mypage|my-page|entry|recruit|career/i.test(url)&&/マイページ|MyPage|ログイン|採用/i.test(all))||null;
   return {finding_type:type,source_external_id:message.id,source_thread_id:message.threadId,source_url:search,source_timestamp:receivedAt,observed_at:now.toISOString(),company:null,confidence:actionType&&(due||starts||/completed|offer|rejection|mypage/.test(type))?.92:(type==='marketing'||type==='no_action'?.9:.55),evidence_excerpt:(subject+' — '+text).slice(0,800),action_type:actionType,action_due_at:due,action_starts_at:starts,action_ends_at:starts&&parsed?.endAt?parsed.endAt:null,payload:{subject,sender,attachment:hasAttachment_(message.payload),urls,myPageUrl,actionType,actionTitle:subject,dueAt:due,startsAt:starts,endsAt:starts&&parsed?.endAt?parsed.endAt:null},fingerprint:`gmail:${message.id}:${type}`};
 }
-function extractText_(part) { const own=part.body&&part.body.data?Utilities.newBlob(Utilities.base64DecodeWebSafe(part.body.data)).getDataAsString('UTF-8'):'';return [own].concat((part.parts||[]).map(extractText_)).join('\n').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,10000); }
+function decodeBody_(data) {
+  if (!data) return '';
+  try {
+    if (typeof data !== 'string') return Utilities.newBlob(data).getDataAsString('UTF-8');
+    const clean=String(data).replace(/\s+/g,'');
+    return Utilities.newBlob(Utilities.base64DecodeWebSafe(clean)).getDataAsString('UTF-8');
+  } catch (_) {
+    return '';
+  }
+}
+function extractText_(part) { const own=decodeBody_(part.body&&part.body.data);return [own].concat((part.parts||[]).map(extractText_)).join('\n').replace(/<script[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,10000); }
 function hasAttachment_(part) { return Boolean(part.filename||(part.parts||[]).some(hasAttachment_)); }
 function api_(action,body) { const p=PropertiesService.getScriptProperties(),r=UrlFetchApp.fetch(p.getProperty('INGEST_URL'),{method:'post',contentType:'application/json',headers:{Authorization:'Bearer '+p.getProperty('COLLECTOR_TOKEN'),'x-collector-type':'gmail'},payload:JSON.stringify(Object.assign({action},body||{})),muteHttpExceptions:true});if(r.getResponseCode()>=300)throw new Error('collector API failed: '+r.getResponseCode());return JSON.parse(r.getContentText()||'{}'); }
 function ingest_(findings) { return api_('ingest',{findings}); }

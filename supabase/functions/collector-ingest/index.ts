@@ -33,7 +33,7 @@ Deno.serve(async (request) => {
   if (body.action && body.action !== 'ingest') return new Response('invalid action', { status: 400 })
   if (!Array.isArray(body.findings) || body.findings.length > 100) return new Response('invalid payload', { status: 400 })
   const rows = body.findings.map((f: Record<string, unknown>) => ({ ...f, user_id: owner, source_type: type, evidence_excerpt: String(f.evidence_excerpt ?? '').slice(0, 800), fingerprint: String(f.fingerprint ?? '') })).filter((f: { fingerprint: string }) => f.fingerprint)
-  const { error } = await admin.from('collector_findings').upsert(rows, { onConflict: 'user_id,fingerprint', ignoreDuplicates: true })
+  const { error } = await admin.from('collector_findings').upsert(rows, { onConflict: 'user_id,fingerprint' })
   if (error) return new Response('ingest failed', { status: 500 })
   // Daily collectors only write proposals. The database function resolves known
   // companies and advances only explicit, high-confidence facts; ambiguous data
