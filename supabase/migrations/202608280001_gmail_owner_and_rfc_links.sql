@@ -19,22 +19,30 @@ declare app jsonb; changed integer := 0;
 begin
   select app_data into app from public.user_app_data where user_id = p_user_id for update;
   if app is null then return 0; end if;
-  app := jsonb_set(app, '{userCompanies}', (
-    select coalesce(jsonb_agg(
-      jsonb_set(company, '{events}', (
-        select coalesce(jsonb_agg(
-          case when coalesce(event->>'sourceRfcMessageId', '') = '' and finding.rfc_message_id is not null
-            then event || jsonb_build_object('sourceRfcMessageId', finding.rfc_message_id)
-            else event end
-        ), '[]'::jsonb)
-        from jsonb_array_elements(coalesce(company->'events', '[]'::jsonb)) event
-        left join public.collector_findings finding
-          on finding.user_id = p_user_id
-         and finding.source_external_id = event->>'sourceMessageId'
+  app := jsonb_set(
+    app,
+    '{userCompanies}',
+    coalesce((
+      select jsonb_agg(
+        jsonb_set(
+          company,
+          '{events}',
+          coalesce((
+            select jsonb_agg(
+              case when coalesce(event->>'sourceRfcMessageId', '') = '' and finding.rfc_message_id is not null
+                then event || jsonb_build_object('sourceRfcMessageId', finding.rfc_message_id)
+                else event end
+            )
+            from jsonb_array_elements(coalesce(company->'events', '[]'::jsonb)) event
+            left join public.collector_findings finding
+              on finding.user_id = p_user_id
+             and finding.source_external_id = event->>'sourceMessageId'
+          ), '[]'::jsonb)
+        )
       )
+      from jsonb_array_elements(app->'userCompanies') company
     ), '[]'::jsonb)
-    from jsonb_array_elements(app->'userCompanies') company
-  ));
+  );
   update public.user_app_data set app_data = app, revision = revision + 1, updated_at = now() where user_id = p_user_id;
   get diagnostics changed = row_count;
   return changed;
