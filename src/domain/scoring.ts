@@ -140,7 +140,9 @@ export function cloneScoringProfile(
     id,
     name,
     kind: 'custom',
-    criteria: source.criteria.map((item) => ({ ...item, id: `${id}_${item.id}` })),
+    // Criterion ids are canonical company-rating keys. A profile copy is a
+    // different weighting lens, never a second set of values to re-enter.
+    criteria: source.criteria.map((item) => ({ ...item })),
     createdAt: now,
     updatedAt: now,
   }

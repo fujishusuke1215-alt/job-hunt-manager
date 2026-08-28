@@ -9,6 +9,7 @@ import {
   setActiveProfile,
   setEvaluationValue,
 } from './profileManagement'
+import { getEvaluation } from './selectors'
 
 const now = '2026-08-21T00:00:00.000Z'
 
@@ -21,6 +22,23 @@ describe('profile management', () => {
     const duplicated = duplicateProfile(active, 'profile_general_v2', 'profile_copy', 'コピー', now)
     expect(duplicated.activeScoringProfileId).toBe('profile_copy')
     expect(duplicated.scoringProfiles.at(-1)?.kind).toBe('custom')
+    expect(duplicated.scoringProfiles.at(-1)?.criteria.map((item) => item.id))
+      .toEqual(active.scoringProfiles[0].criteria.map((item) => item.id))
+  })
+
+  it('profileを切り替えても企業評価を再入力せず、重みだけを変えられる', () => {
+    let data = createEmptyAppData(now)
+    data = setEvaluationValue(data, 'company-1', data.activeScoringProfileId, 'criterion_general_wlb', 4, now)
+    const copied = duplicateProfile(data, data.activeScoringProfileId, 'profile_wlb', 'WLB重視', now)
+    const changed = saveProfileDraft(copied, {
+      ...copied.scoringProfiles.find((item) => item.id === 'profile_wlb')!,
+      criteria: copied.scoringProfiles.find((item) => item.id === 'profile_wlb')!.criteria.map((item) => ({
+        ...item,
+        weight: item.id === 'criterion_general_wlb' ? 100 : 0,
+      })),
+    }, now)
+    expect(getEvaluation(changed, 'company-1')?.values.criterion_general_wlb).toBe(4)
+    expect(changed.evaluations).toHaveLength(1)
   })
 
   it('項目追加と並び替えができる', () => {

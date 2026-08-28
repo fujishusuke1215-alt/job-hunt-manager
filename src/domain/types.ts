@@ -299,6 +299,12 @@ export interface AppDataV2 {
   researchFacts: ResearchFact[]
   scoringProfiles: ScoringProfile[]
   activeScoringProfileId: string
+  /**
+   * The one profile that owns the company's factual ratings.  Every other
+   * profile reuses the same criterion ids and changes only their weights.
+   * Optional for backward-compatible reads; the parser upgrades old data.
+   */
+  canonicalScoringProfileId?: string
   evaluations: CompanyEvaluation[]
   watchRuns: WatchRun[]
   watchFindings: WatchFinding[]

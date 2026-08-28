@@ -10,7 +10,7 @@ export function getActiveScoringProfile(data: AppDataV2): ScoringProfile {
 export function getEvaluation(
   data: AppDataV2,
   userCompanyId: string,
-  scoringProfileId = data.activeScoringProfileId,
+  scoringProfileId = data.canonicalScoringProfileId ?? data.activeScoringProfileId,
 ): CompanyEvaluation | null {
   return data.evaluations.find(
     (evaluation) => evaluation.userCompanyId === userCompanyId && evaluation.scoringProfileId === scoringProfileId,
@@ -23,7 +23,9 @@ export function getCompanyViews(data: AppDataV2, catalog: CatalogData): CompanyV
     const master: MasterCompany | null = company.masterCompanyId
       ? resolveCanonicalMaster(company.masterCompanyId, catalog)
       : null
-    const evaluation = getEvaluation(data, company.id, profile.id)
+    // Ratings belong to the company, not to the currently selected weighting
+    // profile. Profiles only determine how these shared ratings are scored.
+    const evaluation = getEvaluation(data, company.id)
     return {
       company,
       displayName: master?.displayName ?? company.userEnteredName,

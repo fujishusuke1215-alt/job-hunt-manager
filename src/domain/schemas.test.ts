@@ -145,8 +145,8 @@ describe('AppDataV2 runtime integrity', () => {
     expect(invalidIssuePaths(duplicateFactSource)).toContain('researchFacts.0.sources.1.id')
 
     const duplicateCriterion = structuredClone(richAppData())
-    duplicateCriterion.scoringProfiles[1].criteria[0].id = duplicateCriterion.scoringProfiles[0].criteria[0].id
-    expect(invalidIssuePaths(duplicateCriterion)).toContain('scoringProfiles.1.criteria.0.id')
+    duplicateCriterion.scoringProfiles[0].criteria[1].id = duplicateCriterion.scoringProfiles[0].criteria[0].id
+    expect(invalidIssuePaths(duplicateCriterion)).toContain('scoringProfiles.0.criteria.1.id')
   })
 
   it('存在しないactive profileと内部参照先を拒否する', () => {

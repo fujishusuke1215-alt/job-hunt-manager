@@ -615,11 +615,12 @@ export default function App() {
       selectionStageUpdatedAt: stageChanged ? now : currentCompany?.selectionStageUpdatedAt ?? now,
       lastCompanyInteractionAt: now,
     }
-    const existingEvaluation = getEvaluation(data, companyId, profile.id)
+    const canonicalProfileId = data.canonicalScoringProfileId ?? profile.id
+    const existingEvaluation = getEvaluation(data, companyId, canonicalProfileId)
     const evaluation = {
       id: existingEvaluation?.id ?? createId('evaluation'),
       userCompanyId: companyId,
-      scoringProfileId: profile.id,
+      scoringProfileId: canonicalProfileId,
       values,
       createdAt: existingEvaluation?.createdAt ?? now,
       updatedAt: now,

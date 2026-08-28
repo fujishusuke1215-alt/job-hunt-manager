@@ -273,6 +273,7 @@ export const appDataV2Schema = z.object({
   researchFacts: z.array(researchFactSchema),
   scoringProfiles: z.array(scoringProfileSchema).min(1),
   activeScoringProfileId: z.string().min(1),
+  canonicalScoringProfileId: z.string().min(1).optional(),
   evaluations: z.array(companyEvaluationSchema),
   watchRuns: z.array(watchRunSchema),
   watchFindings: z.array(watchFindingSchema),
@@ -328,6 +329,10 @@ export const appDataV2Schema = z.object({
   if (!data.scoringProfiles.some((profile) => profile.id === data.activeScoringProfileId)) {
     context.addIssue({ code: 'custom', path: ['activeScoringProfileId'], message: '有効な評価プロファイルがありません。' })
   }
+  const canonicalProfileId = data.canonicalScoringProfileId ?? data.activeScoringProfileId
+  if (!data.scoringProfiles.some((profile) => profile.id === canonicalProfileId)) {
+    context.addIssue({ code: 'custom', path: ['canonicalScoringProfileId'], message: '基準となる企業評価プロファイルがありません。' })
+  }
 
   const userCompanyIds = new Set(data.userCompanies.map((company) => company.id))
   const scoringProfileById = new Map(data.scoringProfiles.map((profile) => [profile.id, profile]))
@@ -343,7 +348,6 @@ export const appDataV2Schema = z.object({
     })
   })
 
-  const criterionOwner = new Map<string, { profileIndex: number; criterionIndex: number }>()
   data.scoringProfiles.forEach((profile, profileIndex) => {
     duplicateIndexes(profile.criteria, (criterion) => String(criterion.order)).forEach((criterionIndex) => {
       context.addIssue({
@@ -352,16 +356,12 @@ export const appDataV2Schema = z.object({
         message: '同じ評価プロファイル内でCriterionの表示順が重複しています。',
       })
     })
-    profile.criteria.forEach((criterion, criterionIndex) => {
-      if (criterionOwner.has(criterion.id)) {
-        context.addIssue({
-          code: 'custom',
-          path: ['scoringProfiles', profileIndex, 'criteria', criterionIndex, 'id'],
-          message: 'Criterion IDが評価プロファイル間で重複しています。',
-        })
-      } else {
-        criterionOwner.set(criterion.id, { profileIndex, criterionIndex })
-      }
+    duplicateIndexes(profile.criteria, (criterion) => criterion.id).forEach((criterionIndex) => {
+      context.addIssue({
+        code: 'custom',
+        path: ['scoringProfiles', profileIndex, 'criteria', criterionIndex, 'id'],
+        message: '同じ評価プロファイル内でCriterion IDが重複しています。',
+      })
     })
   })
 
@@ -522,6 +522,7 @@ function isRecord(value: unknown): value is UnknownRecord {
 export function normalizeAppDataV2DateTimes(input: unknown): unknown {
   if (!isRecord(input)) return input
   const normalized = structuredClone(input)
+  normalizeCanonicalRanking(normalized)
   const normalizeOptionalTimestamp = (record: UnknownRecord, key: string) => {
     if (typeof record[key] === 'string') record[key] = canonicalIsoDateTime(record[key])
   }
@@ -556,6 +557,75 @@ export function normalizeAppDataV2DateTimes(input: unknown): unknown {
     })
   }
   return normalized
+}
+
+/**
+ * v2 originally stored a second CompanyEvaluation for every scoring profile.
+ * Upgrade that shape without guessing any scores: the active profile is the
+ * authoritative company-rating set and all profiles receive those same keys,
+ * retaining only their own weights.  Old alternate-profile values are never
+ * used to overwrite the active profile's confirmed values.
+ */
+function normalizeCanonicalRanking(data: UnknownRecord) {
+  if (!Array.isArray(data.scoringProfiles) || !Array.isArray(data.evaluations)) return
+  const profiles = data.scoringProfiles
+  const evaluations = data.evaluations
+  const activeId = typeof data.activeScoringProfileId === 'string' ? data.activeScoringProfileId : null
+  const hasExplicitCanonical = typeof data.canonicalScoringProfileId === 'string'
+  // The personal-ranking import is the only legacy source whose current
+  // values are authoritative canonical ratings. Other v2 data keeps its
+  // established shape until a user opts into a canonical profile.
+  if (!hasExplicitCanonical && !activeId?.startsWith('profile_personal_ranking_')) return
+  const requestedCanonical = hasExplicitCanonical ? data.canonicalScoringProfileId as string : activeId
+  const canonical = profiles.find((profile) => isRecord(profile) && profile.id === requestedCanonical)
+  if (!isRecord(canonical) || !Array.isArray(canonical.criteria) || typeof requestedCanonical !== 'string') return
+  const profileIds = new Set(profiles.filter(isRecord).map((profile) => profile.id))
+  // Preserve malformed records verbatim so the schema reports their precise
+  // original path instead of silently repairing an invalid import.
+  if (evaluations.some((evaluation) => !isRecord(evaluation) || !profileIds.has(evaluation.scoringProfileId))) return
+
+  const canonicalCriteria = canonical.criteria.filter(isRecord)
+  const labelKey = (value: unknown) => typeof value === 'string' ? value.trim().toLocaleLowerCase('ja-JP') : ''
+  data.canonicalScoringProfileId = requestedCanonical
+  data.scoringProfiles = profiles.map((profile) => {
+    if (!isRecord(profile) || profile.id === requestedCanonical || !Array.isArray(profile.criteria)) return profile
+    const oldCriteria = profile.criteria.filter(isRecord)
+    return {
+      ...profile,
+      criteria: canonicalCriteria.map((criterion, order) => {
+        const byId = oldCriteria.find((candidate) => candidate.id === criterion.id)
+        const byLabel = oldCriteria.find((candidate) => labelKey(candidate.label) === labelKey(criterion.label))
+        return { ...criterion, weight: (byId ?? byLabel)?.weight ?? criterion.weight, order }
+      }),
+    }
+  })
+
+  const canonicalCompanies = new Set(
+    evaluations.filter((evaluation) => isRecord(evaluation) && evaluation.scoringProfileId === requestedCanonical)
+      .map((evaluation) => evaluation.userCompanyId),
+  )
+  const retained = evaluations.filter((evaluation) => isRecord(evaluation) && evaluation.scoringProfileId === requestedCanonical)
+  const recovered = evaluations
+    .filter((evaluation) => isRecord(evaluation) && evaluation.scoringProfileId !== requestedCanonical && !canonicalCompanies.has(evaluation.userCompanyId))
+    .map((evaluation) => {
+      const former = profiles.find((profile) => isRecord(profile) && profile.id === evaluation.scoringProfileId)
+      const formerCriteria = isRecord(former) && Array.isArray(former.criteria) ? former.criteria.filter(isRecord) : []
+      const values = isRecord(evaluation.values) ? evaluation.values : {}
+      return {
+        ...evaluation,
+        id: `canonical_${String(evaluation.id)}`,
+        scoringProfileId: requestedCanonical,
+        values: Object.fromEntries(canonicalCriteria.map((criterion) => {
+          const formerCriterion = formerCriteria.find((item) => item.id === criterion.id || labelKey(item.label) === labelKey(criterion.label))
+          const raw = formerCriterion && typeof formerCriterion.id === 'string' ? values[formerCriterion.id] : null
+          const sourceMax = formerCriterion && typeof formerCriterion.scaleMax === 'number' ? formerCriterion.scaleMax : null
+          const targetMax = typeof criterion.scaleMax === 'number' ? criterion.scaleMax : null
+          const scaled = typeof raw === 'number' && sourceMax && targetMax ? raw / sourceMax * targetMax : null
+          return [criterion.id as string, scaled]
+        })),
+      }
+    })
+  data.evaluations = [...retained, ...recovered]
 }
 
 export function parseAppDataV2(input: unknown) {

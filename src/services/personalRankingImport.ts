@@ -195,6 +195,7 @@ export function applyPersonalRankingImport(
     updatedAt: now,
     scoringProfiles: profiles,
     activeScoringProfileId: profile.id,
+    canonicalScoringProfileId: profile.id,
     evaluations: [...preserved, ...evaluations],
   }
 }

@@ -72,13 +72,18 @@ export function parseLegacyV1(raw: string): LegacyCompanyV1[] {
 
 export function createEmptyAppData(now = new Date().toISOString()): AppDataV2 {
   const general = createGeneralScoringProfile(now)
+  const reference = createDeveloperReferenceProfile(now)
+  // Profiles start as alternate weight lenses over the same company-rating
+  // keys. Existing personal rankings receive the same upgrade at read time.
+  reference.criteria = general.criteria.map((item) => ({ ...item }))
   return {
     schemaVersion: 2,
     revision: 0,
     userCompanies: [],
     researchFacts: [],
-    scoringProfiles: [general, createDeveloperReferenceProfile(now)],
+    scoringProfiles: [general, reference],
     activeScoringProfileId: general.id,
+    canonicalScoringProfileId: general.id,
     evaluations: [],
     watchRuns: [],
     watchFindings: [],

@@ -1,4 +1,4 @@
-import type { AppDataV2, CompanyEvaluation, Criterion, ScoringProfile } from './types'
+import type { AppDataV2, Criterion, ScoringProfile } from './types'
 import { cloneScoringProfile, rescaleCriterionValues } from './scoring'
 
 const touch = (data: AppDataV2, now: string): AppDataV2 => ({
@@ -13,11 +13,12 @@ export function createCustomProfile(
   name: string,
   now = new Date().toISOString(),
 ): AppDataV2 {
+  const canonical = data.scoringProfiles.find((profile) => profile.id === (data.canonicalScoringProfileId ?? data.activeScoringProfileId))
   const profile: ScoringProfile = {
     id,
     name: name.trim() || '新しい評価プロファイル',
     kind: 'custom',
-    criteria: [],
+    criteria: canonical?.criteria.map((item) => ({ ...item })) ?? [],
     createdAt: now,
     updatedAt: now,
   }
@@ -34,27 +35,10 @@ export function duplicateProfile(
   const source = data.scoringProfiles.find((profile) => profile.id === sourceProfileId)
   if (!source) throw new Error('複製元の評価プロファイルが見つかりません。')
   const profile = cloneScoringProfile(source, id, name.trim() || `${source.name} のコピー`, now)
-  const idMap = new Map(source.criteria.map((item, index) => [item.id, profile.criteria[index].id]))
-  const evaluations: CompanyEvaluation[] = [
-    ...data.evaluations,
-    ...data.evaluations
-      .filter((evaluation) => evaluation.scoringProfileId === source.id)
-      .map((evaluation) => ({
-        ...evaluation,
-        id: `${id}_${evaluation.userCompanyId}`,
-        scoringProfileId: id,
-        values: Object.fromEntries(
-          Object.entries(evaluation.values).map(([criterionId, value]) => [idMap.get(criterionId) ?? criterionId, value]),
-        ),
-        createdAt: now,
-        updatedAt: now,
-      })),
-  ]
   return touch({
     ...data,
     scoringProfiles: [...data.scoringProfiles, profile],
     activeScoringProfileId: id,
-    evaluations,
   }, now)
 }
 
@@ -82,29 +66,38 @@ export function saveProfileDraft(
     throw new Error('項目名、最大点、weightを確認してください。')
   }
 
-  let evaluations = data.evaluations
-  for (const item of profileDraft.criteria) {
-    const old = previous.criteria.find((candidate) => candidate.id === item.id)
-    if (old && old.scaleMax !== item.scaleMax) {
-      evaluations = rescaleCriterionValues(evaluations, item.id, old.scaleMax, item.scaleMax, now)
-    }
+  const canonicalId = data.canonicalScoringProfileId ?? data.activeScoringProfileId
+  const canonical = data.scoringProfiles.find((profile) => profile.id === canonicalId)
+  if (!canonical) throw new Error('基準となる企業評価が見つかりません。')
+  const isCanonical = profileDraft.id === canonicalId
+  const canonicalById = new Map(canonical.criteria.map((item) => [item.id, item]))
+  if (!isCanonical && profileDraft.criteria.some((item) => !canonicalById.has(item.id))) {
+    throw new Error('ランキングプロファイルでは評価項目を追加・削除できません。重み付けのみ変更できます。')
   }
 
-  const nextIds = new Set(profileDraft.criteria.map((item) => item.id))
-  evaluations = evaluations.map((evaluation) => {
-    if (evaluation.scoringProfileId !== profileDraft.id) return evaluation
-    const values = Object.fromEntries(
-      profileDraft.criteria.map((item) => [item.id, evaluation.values[item.id] ?? null]),
-    )
-    return { ...evaluation, values, updatedAt: now }
-  })
+  let evaluations = data.evaluations
+  if (isCanonical) {
+    for (const item of profileDraft.criteria) {
+      const old = previous.criteria.find((candidate) => candidate.id === item.id)
+      if (old && old.scaleMax !== item.scaleMax) {
+        evaluations = rescaleCriterionValues(evaluations, item.id, old.scaleMax, item.scaleMax, now)
+      }
+    }
+    const canonicalIds = new Set(profileDraft.criteria.map((item) => item.id))
+    evaluations = evaluations.map((evaluation) => evaluation.scoringProfileId !== canonicalId ? evaluation : {
+      ...evaluation,
+      values: Object.fromEntries(Object.entries(evaluation.values).filter(([criterionId]) => canonicalIds.has(criterionId))),
+      updatedAt: now,
+    })
+  }
 
   const nextProfile: ScoringProfile = {
     ...profileDraft,
     name: profileDraft.name.trim(),
-    criteria: profileDraft.criteria
-      .filter((item) => nextIds.has(item.id))
-      .map((item, order) => ({ ...item, label: item.label.trim(), order })),
+    criteria: (isCanonical ? profileDraft.criteria : canonical.criteria.map((item) => ({
+      ...item,
+      weight: profileDraft.criteria.find((candidate) => candidate.id === item.id)?.weight ?? item.weight,
+    }))).map((item, order) => ({ ...item, label: item.label.trim(), order })),
     updatedAt: now,
   }
   return touch({
@@ -152,7 +145,8 @@ export function setEvaluationValue(
   value: number | null,
   now = new Date().toISOString(),
 ): AppDataV2 {
-  const profile = data.scoringProfiles.find((item) => item.id === profileId)
+  const canonicalId = data.canonicalScoringProfileId ?? data.activeScoringProfileId
+  const profile = data.scoringProfiles.find((item) => item.id === canonicalId)
   const criterion = profile?.criteria.find((item) => item.id === criterionId)
   if (!profile || !criterion) throw new Error('評価項目が見つかりません。')
   if (value !== null && (!Number.isInteger(value) || value < 0 || value > criterion.scaleMax)) {
@@ -160,7 +154,7 @@ export function setEvaluationValue(
   }
   const normalized = value === null ? null : value
   const existing = data.evaluations.find(
-    (evaluation) => evaluation.userCompanyId === userCompanyId && evaluation.scoringProfileId === profileId,
+    (evaluation) => evaluation.userCompanyId === userCompanyId && evaluation.scoringProfileId === canonicalId,
   )
   const evaluations = existing
     ? data.evaluations.map((evaluation) => evaluation.id === existing.id
@@ -169,7 +163,7 @@ export function setEvaluationValue(
     : [...data.evaluations, {
       id: `evaluation_${userCompanyId}_${profileId}`,
       userCompanyId,
-      scoringProfileId: profileId,
+      scoringProfileId: canonicalId,
       values: Object.fromEntries(profile.criteria.map((item) => [item.id, item.id === criterionId ? normalized : null])),
       createdAt: now,
       updatedAt: now,

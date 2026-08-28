@@ -805,7 +805,7 @@ function previewEntity(
       profile.id !== target?.id && profile.criteria.some((current) => current.id === criterion.id),
     ),
   )
-  if (criterionOwnedByAnotherProfile) {
+  if (criterionOwnedByAnotherProfile && !data.canonicalScoringProfileId) {
     return {
       targetEntityId: target?.id ?? null,
       targetLabel: operation.payload.name,
