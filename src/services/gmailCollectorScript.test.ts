@@ -13,7 +13,7 @@ function loadCollectorContext() {
   const context: Record<string, unknown> = {
     PropertiesService: {
       getScriptProperties: () => ({
-        getProperty: (key: string) => key === 'GMAIL_ACCOUNT_INDEX' ? '7' : null,
+        getProperty: (key: string) => key === 'EXPECTED_GMAIL_ACCOUNT' ? 'fuji.sh1215@gmail.com' : null,
       }),
     },
     Utilities: {
@@ -69,6 +69,7 @@ describe('Gmail collector Apps Script', () => {
           headers: [
             { name: 'Subject', value: 'Webテストのご案内' },
             { name: 'From', value: 'recruit@example.com' },
+            { name: 'Message-ID', value: '<message-1@example.com>' },
           ],
           body: { data: body },
         },
@@ -78,6 +79,8 @@ describe('Gmail collector Apps Script', () => {
 
     expect(finding.action_type).toBe('WEB_TEST_DEADLINE')
     expect(finding.action_due_at).toBe('2026-09-01T09:00:00.000Z')
-    expect(finding.source_url).toContain('/mail/u/7/#search/')
+    expect(finding.source_url).toContain('authuser=fuji.sh1215%40gmail.com')
+    expect(finding.source_url).toContain('rfc822msgid')
+    expect((finding.payload as Record<string, unknown>).rfcMessageId).toBe('<message-1@example.com>')
   })
 })

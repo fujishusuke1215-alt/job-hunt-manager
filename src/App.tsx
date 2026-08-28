@@ -50,6 +50,7 @@ import { createId } from './utils/id'
 import { syncMonitoringTargetsFromCandidates } from './services/monitoringOnboarding'
 import { previewMonitoringTargetsCsv, type CsvPreview } from './services/monitoringCsv'
 import { approveCollectorFinding, type CollectorFinding } from './services/collectorFindings'
+import type { TodayAction } from './domain/watch'
 
 type FormState = { kind: 'add' } | { kind: 'edit'; companyId: string } | null
 type LocalCandidateScenario = 'drive-empty' | 'both'
@@ -106,6 +107,7 @@ export default function App() {
   const [filters, setFilters] = useState<CompanyFilters>(defaultFilters)
   const [formState, setFormState] = useState<FormState>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
   const [personalSyncStatus, setPersonalSyncStatus] = useState<SyncStatus>('signed-out')
   const [personalSyncMessage, setPersonalSyncMessage] = useState('')
   const [conflict, setConflict] = useState<StorageConflict | null>(null)
@@ -581,7 +583,22 @@ export default function App() {
 
   const openCompany = (id: string) => {
     setSelectedId(id)
+    setSelectedEventId(null)
     setView('companies')
+  }
+  const openAction = (action: TodayAction) => {
+    setSelectedId(action.userCompanyId)
+    setSelectedEventId(action.selectionEventId ?? null)
+    setView('companies')
+  }
+  const setActionStatus = (action: TodayAction, status: SelectionEvent['status']) => {
+    if (action.source !== 'selection_event' || !action.selectionEventId) return
+    const now = new Date().toISOString()
+    commitData(touch(data, { userCompanies: data.userCompanies.map((company) => company.id !== action.userCompanyId ? company : {
+      ...company,
+      updatedAt: now,
+      events: company.events.map((event) => event.id === action.selectionEventId ? { ...event, status } : event),
+    }) }, now))
   }
 
   const saveCompany = (draft: UserCompanyDraft, values: Record<string, number | null>) => {
@@ -715,15 +732,15 @@ export default function App() {
           </section>
         ) : (
           <>
-            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} collectorFindings={collectorFindings} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} onOpenCollectorFindings={() => setView('findings')} />}
-            {view === 'companies' && <CompanyList companies={companyViews} filters={filters} onFiltersChange={setFilters} onOpen={openCompany} onEdit={(companyId) => setFormState({ kind: 'edit', companyId })} onDelete={deleteCompany} onAdd={() => setFormState({ kind: 'add' })} />}
+            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} collectorFindings={collectorFindings} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} onOpenCollectorFindings={() => setView('findings')} onOpenAction={openAction} onCompleteAction={(action) => setActionStatus(action, '完了')} onUndoAction={(action) => setActionStatus(action, '予定')} />}
+            {view === 'companies' && <CompanyList companies={companyViews} profile={profile} filters={filters} onFiltersChange={setFilters} onOpen={openCompany} onEdit={(companyId) => setFormState({ kind: 'edit', companyId })} onDelete={deleteCompany} onAdd={() => setFormState({ kind: 'add' })} />}
             {view === 'scoring' && <ScoringSettings data={data} onChange={commitData} />}
             {view === 'ai-sync' && <AiSync data={data} catalog={catalog} onChange={commitData} />}
             {view === 'watch' && <WatchCenter companies={companyViews} findings={data.watchFindings} runs={data.watchRuns} onStatusChange={changeWatchStatus} onOpenCompany={openCompany} />}
             {view === 'findings' && <CollectorFindings findings={collectorFindings} companies={companyViews} onApprove={approveFinding} onReject={rejectFinding} />}
-            {view === 'data' && <DataTools mode={mode} data={data} storageLabel={storageLabel} syncStatus={mode === 'demo' ? 'synced' : personalSyncStatus} onPreviewImport={previewBackupImport} onCommitImport={commitBackupImport} onPreviewCsvImport={previewCsvImport} onCommitCsvImport={commitCsvImport} onClear={() => commitData(createEmptyAppData())} onResetDemo={() => setDemoData(createDemoAppData())} />}
+            {view === 'data' && <DataTools mode={mode} data={data} storageLabel={storageLabel} syncStatus={mode === 'demo' ? 'synced' : personalSyncStatus} accountEmail={account?.email} collectorStates={collectorStates} collectorFindings={collectorFindings} onPreviewImport={previewBackupImport} onCommitImport={commitBackupImport} onPreviewCsvImport={previewCsvImport} onCommitCsvImport={commitCsvImport} onClear={() => commitData(createEmptyAppData())} onResetDemo={() => setDemoData(createDemoAppData())} />}
 
-            {selectedView && <CompanyDetail view={selectedView} profile={profile} onClose={() => setSelectedId(null)} onEdit={() => { setFormState({ kind: 'edit', companyId: selectedView.company.id }); setSelectedId(null) }} onUpdateEvents={updateEvents} onSaveFact={saveFact} />}
+            {selectedView && <CompanyDetail view={selectedView} profile={profile} highlightedEventId={selectedEventId} onClose={() => { setSelectedId(null); setSelectedEventId(null) }} onEdit={() => { setFormState({ kind: 'edit', companyId: selectedView.company.id }); setSelectedId(null); setSelectedEventId(null) }} onUpdateEvents={updateEvents} onSaveFact={saveFact} />}
             {formState && <CompanyForm companyView={editingView} catalog={catalog} profile={profile} evaluation={editingView?.evaluation ?? null} onSubmit={saveCompany} onSaveProfile={(profileDraft) => commitData(saveProfileDraft(data, profileDraft))} onCancel={() => setFormState(null)} />}
           </>
         )}

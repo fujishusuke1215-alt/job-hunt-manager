@@ -1,7 +1,8 @@
 import { selectionLabel, selectionStatusOptions } from '../domain/selection'
+import { useState } from 'react'
 import type { CompanyView, WatchFinding } from '../domain/types'
 import { rankCompanyViews } from '../domain/selectors'
-import { buildTodayActions } from '../domain/watch'
+import { buildTodayActions, type TodayAction } from '../domain/watch'
 import { deadlineTone, formatDeadlineLabel, getDaysUntil } from '../utils/deadlines'
 import type { CollectorStateSummary } from '../repositories/supabaseStorage'
 import type { CollectorFinding } from '../services/collectorFindings'
@@ -17,9 +18,13 @@ interface DashboardProps {
   collectorStates?: CollectorStateSummary[]
   collectorFindings?: CollectorFinding[]
   onOpenCollectorFindings?: () => void
+  onOpenAction?: (action: TodayAction) => void
+  onCompleteAction?: (action: TodayAction) => void
+  onUndoAction?: (action: TodayAction) => void
 }
 
-export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, onOpenWatch, collectorStates = [], collectorFindings = [], onOpenCollectorFindings }: DashboardProps) {
+export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, onOpenWatch, collectorStates = [], collectorFindings = [], onOpenCollectorFindings, onOpenAction, onCompleteAction, onUndoAction }: DashboardProps) {
+  const [completedActions, setCompletedActions] = useState<TodayAction[]>([])
   const activeCount = companies.filter((view) => !['検討中', '内定', '終了'].includes(view.company.applicationStatus)).length
   const waitingCount = companies.filter((view) => view.company.applicationStatus === '結果待ち').length
   const sevenDayCount = companies.flatMap((view) => view.company.events).filter((event) => {
@@ -41,6 +46,19 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
   const webStale = !lastWebSuccess || Date.now() - new Date(lastWebSuccess).getTime() > 36 * 60 * 60 * 1000
   const urgentCollectorFindings = urgentPendingCollectorFindings(collectorFindings)
   const conflicts = detectScheduleConflicts(companies)
+  const actionGroups = [
+    ['期限超過', actions.filter((item) => item.deadlineBucket === 'overdue')],
+    ['今日・24時間以内', actions.filter((item) => item.deadlineBucket === 'within_24_hours')],
+    ['近日（3〜7日）', actions.filter((item) => item.deadlineBucket === 'within_3_days' || item.deadlineBucket === 'within_7_days')],
+  ] as const
+  const complete = (item: TodayAction) => {
+    onCompleteAction?.(item)
+    setCompletedActions((current) => [...current.filter((candidate) => candidate.id !== item.id), item])
+  }
+  const undo = (item: TodayAction) => {
+    onUndoAction?.(item)
+    setCompletedActions((current) => current.filter((candidate) => candidate.id !== item.id))
+  }
 
   return (
     <section className="page-stack" aria-labelledby="dashboard-title">
@@ -65,13 +83,14 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
             <div className="panel-heading"><div><p className="eyebrow">TODAY'S ACTIONS</p><h2>今日の要対応</h2></div><span className="panel-count">{actions.length}件</span></div>
             <p className="panel-description">超過 → 24時間 → 3日 → 7日 → Watch重要度。同条件だけ適合度を使います。</p>
             <div className="deadline-list">
-              {actions.length === 0 ? <p className="muted-message">未完了の予定・Watchはありません。</p> : actions.slice(0, 8).map((item) => (
-                <div className="deadline-row-wrap" key={item.id}><button className="deadline-row" type="button" onClick={() => item.source === 'watch_finding' ? onOpenWatch() : onOpenCompany(item.userCompanyId)}>
+              {actions.length === 0 ? <p className="muted-message">未完了の予定・Watchはありません。</p> : actionGroups.map(([label, group]) => group.length > 0 && <div className="action-group" key={label}><h3>{label}</h3>{group.map((item) => (
+                <div className="deadline-row-wrap" key={item.id}><button className="deadline-row" type="button" onClick={() => onOpenAction ? onOpenAction(item) : item.source === 'watch_finding' ? onOpenWatch() : onOpenCompany(item.userCompanyId)}>
                   <span className={`deadline-date ${item.deadline ? deadlineTone(item.deadline) : ''}`}><strong>{item.source === 'watch_finding' ? 'W' : new Date(item.deadline ?? '').getDate()}</strong><small>{item.source === 'watch_finding' ? 'WATCH' : new Date(item.deadline ?? '').toLocaleDateString('ja-JP', { month: 'short' })}</small></span>
                   <span className="deadline-copy"><strong>{item.companyName}</strong><small>{item.title}</small></span>
                   <span className={`deadline-badge ${item.deadline ? deadlineTone(item.deadline) : ''}`}>{item.deadline ? formatDeadlineLabel(item.deadline) : `Watch ${item.severity}`}</span>
-                </button>{item.source === 'selection_event' && (item.myPageUrl || item.sourceUrl) && <span className="action-source-links">{item.myPageUrl && <a href={item.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span>}</div>
-              ))}
+                </button>{item.source === 'selection_event' && (item.myPageUrl || item.sourceUrl) && <span className="action-source-links">{item.myPageUrl && <a href={item.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span>}<button className="text-button action-complete" type="button" onClick={() => complete(item)}>完了</button></div>
+              ))}</div>)}
+              {completedActions.length > 0 && <div className="completed-action-strip"><span>完了にした項目</span>{completedActions.map((item) => <button className="text-button" type="button" onClick={() => undo(item)} key={item.id}>{item.companyName} / {item.title} を戻す</button>)}</div>}
             </div>
           </article>
 

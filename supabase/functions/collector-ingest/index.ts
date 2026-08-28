@@ -11,6 +11,19 @@ Deno.serve(async (request) => {
   const owner = Deno.env.get('COLLECTOR_OWNER_USER_ID'); if (!owner) return new Response('server misconfigured', { status: 500 })
   const body = await request.json()
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  if (type === 'gmail' && body.action === 'gmail_collector_state') {
+    const failed = body.status === 'failed'
+    const cursor = { gmail_account: String(body.expected_account ?? ''), account_verified: !failed }
+    const { error } = await admin.from('collector_state').upsert({
+      user_id: owner,
+      collector_type: 'gmail',
+      target_key: 'owner',
+      last_attempt: new Date().toISOString(),
+      ...(failed ? { last_error_category: String(body.error_category ?? 'gmail_collector_failed'), failure_count: 1 } : { last_success: new Date().toISOString(), last_error_category: null, failure_count: 0 }),
+      cursor,
+    }, { onConflict: 'user_id,collector_type,target_key' })
+    return error ? new Response('gmail state failed', { status: 500 }) : Response.json({ ok: true })
+  }
   if (type === 'gmail' && body.action === 'gmail_backfill_requests') {
     const { data, error } = await admin.from('gmail_backfill_requests').select('id,monitoring_target_id,monitoring_targets!inner(canonical_name,aliases,sender_domains)').eq('user_id', owner).eq('status', 'queued').order('requested_at').limit(10)
     if (error) return new Response('backfill queue failed', { status: 500 })
@@ -32,9 +45,11 @@ Deno.serve(async (request) => {
   if (type === 'web' && body.action === 'state') { const target=String(body.target_id??''); if(!target)return new Response('invalid target',{status:400}); if(body.dry_run===true)return Response.json({ok:true,dry_run:true}); const {data:prior,error:priorError}=await admin.from('collector_state').select('cursor,failure_count').eq('user_id',owner).eq('collector_type','web').eq('target_key',target).maybeSingle(); if(priorError)return new Response('state lookup failed',{status:500}); const failed=Boolean(body.error_category); const update=failed?{last_attempt:body.last_attempt??new Date().toISOString(),last_error_category:String(body.error_category),failure_count:Number(prior?.failure_count??0)+1}:{last_attempt:body.last_attempt??new Date().toISOString(),last_success:body.last_success??new Date().toISOString(),last_error_category:null,failure_count:0,cursor:{content_hash:body.content_hash,final_url:body.final_url}}; const {error}=await admin.from('collector_state').upsert({user_id:owner,collector_type:'web',target_key:target,...update},{onConflict:'user_id,collector_type,target_key'}); return error?new Response('state failed',{status:500}):Response.json({ok:true}) }
   if (body.action && body.action !== 'ingest') return new Response('invalid action', { status: 400 })
   if (!Array.isArray(body.findings) || body.findings.length > 100) return new Response('invalid payload', { status: 400 })
-  const rows = body.findings.map((f: Record<string, unknown>) => ({ ...f, user_id: owner, source_type: type, evidence_excerpt: String(f.evidence_excerpt ?? '').slice(0, 800), fingerprint: String(f.fingerprint ?? '') })).filter((f: { fingerprint: string }) => f.fingerprint)
+  const rows = body.findings.map((f: Record<string, unknown>) => ({ ...f, user_id: owner, source_type: type, rfc_message_id: typeof (f.payload as Record<string, unknown> | undefined)?.rfcMessageId === 'string' ? (f.payload as Record<string, unknown>).rfcMessageId : null, evidence_excerpt: String(f.evidence_excerpt ?? '').slice(0, 800), fingerprint: String(f.fingerprint ?? '') })).filter((f: { fingerprint: string }) => f.fingerprint)
   const { error } = await admin.from('collector_findings').upsert(rows, { onConflict: 'user_id,fingerprint' })
   if (error) return new Response('ingest failed', { status: 500 })
+  const { error: onboardingError } = await admin.rpc('auto_onboard_strong_gmail_companies', { p_user_id: owner, p_limit: 100 })
+  if (onboardingError) return new Response('automatic onboarding failed', { status: 500 })
   // Daily collectors only write proposals. The database function resolves known
   // companies and advances only explicit, high-confidence facts; ambiguous data
   // remains in the review inbox.
@@ -44,5 +59,7 @@ Deno.serve(async (request) => {
   if (confirmedError) return new Response('notification confirmation failed', { status: 500 })
   const { data: events, error: eventsError } = await admin.rpc('apply_auto_collector_events', { p_user_id: owner, p_limit: 500 })
   if (eventsError) return new Response('event reflection failed', { status: 500 })
+  const { error: rfcError } = await admin.rpc('attach_collector_rfc_message_ids', { p_user_id: owner })
+  if (rfcError) return new Response('RFC message linkage failed', { status: 500 })
   return Response.json({ accepted: rows.length, triage: Array.isArray(triage) ? triage[0] ?? null : triage, confirmed: Array.isArray(confirmed) ? confirmed[0] ?? null : confirmed, events: Array.isArray(events) ? events[0] ?? null : events })
 })

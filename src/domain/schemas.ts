@@ -63,6 +63,7 @@ export const selectionEventSchema = z.object({
   startsAt: nullableDateSchema.optional(),
   endsAt: nullableDateSchema.optional(),
   sourceMessageId: z.string().nullable().optional(),
+  sourceRfcMessageId: z.string().nullable().optional(),
   sourceThreadId: z.string().nullable().optional(),
   sourceSubject: z.string().nullable().optional(),
   sourceUrl: nullableSafeUrlSchema.optional(),

@@ -1,9 +1,10 @@
-/* Owner-only Gmail collector. Configure INGEST_URL, COLLECTOR_TOKEN, BACKFILL_SINCE, and GMAIL_ACCOUNT_INDEX. */
+/* Owner-only Gmail collector. Configure INGEST_URL, COLLECTOR_TOKEN, BACKFILL_SINCE, and EXPECTED_GMAIL_ACCOUNT. */
 const JST = 'Asia/Tokyo';
 function runInitialBackfill() { return runCollector_(true); }
 function runDailyIncremental() { runCollector_(false); runQueuedCompanyBackfills_(); }
 function runCollector_(backfill) {
   const p = PropertiesService.getScriptProperties(), now = new Date();
+  assertExpectedGmailAccount_();
   const since = new Date(backfill ? (p.getProperty('BACKFILL_SINCE') || '2026-07-24T00:00:00+09:00') : (p.getProperty('LAST_SUCCESSFUL_SYNC') || p.getProperty('BACKFILL_SINCE') || '2026-07-24T00:00:00+09:00'));
   since.setHours(since.getHours() - 2);
   const query = `after:${Utilities.formatDate(since, JST, 'yyyy/MM/dd')} (採用 OR 選考 OR 面接 OR ES OR "Webテスト" OR 適性検査 OR エントリー OR インターン OR 説明会 OR 結果 OR 締切 OR マイページ)`;
@@ -13,6 +14,7 @@ function runCollector_(backfill) {
   p.deleteProperty('RESUME_PAGE_TOKEN'); p.setProperty('LAST_SUCCESSFUL_SYNC', now.toISOString());
 }
 function runQueuedCompanyBackfills_() {
+  assertExpectedGmailAccount_();
   const queue = api_('gmail_backfill_requests', {}); (queue.requests || []).forEach(request => {
     try {
       const names = [request.canonical_name].concat(request.aliases || []).filter(Boolean).map(x => `"${String(x).replace(/"/g, '')}"`);
@@ -22,6 +24,19 @@ function runQueuedCompanyBackfills_() {
       ingest_(findings); api_('gmail_backfill_complete', { request_id: request.id, result_count: findings.length });
     } catch (error) { api_('gmail_backfill_complete', { request_id: request.id, error: String(error).slice(0, 500) }); }
   });
+}
+function assertExpectedGmailAccount_() {
+  const expected = String(PropertiesService.getScriptProperties().getProperty('EXPECTED_GMAIL_ACCOUNT') || 'fuji.sh1215@gmail.com').trim().toLowerCase();
+  const actual = String(Gmail.Users.getProfile('me').emailAddress || '').trim().toLowerCase();
+  if (actual !== expected) {
+    // Do not send the unexpected account address to the backend.  The owner can
+    // see a clear state message without turning a wrong-account run into Gmail
+    // ingress for this application.
+    try { api_('gmail_collector_state', { status: 'failed', error_category: 'gmail_account_mismatch', expected_account: expected }); } catch (_) {}
+    throw new Error('gmail_account_mismatch: collector is not running as the configured owner account');
+  }
+  try { api_('gmail_collector_state', { status: 'running', expected_account: expected }); } catch (_) {}
+  return actual;
 }
 function classify_(text) {
   const v = text.replace(/\s+/g, ' ');
@@ -52,10 +67,18 @@ function parseDateTime_(text, receivedAt) {
   const range=v.match(/(?:〜|～|\-|–|から)\s*(\d{1,2})(?:時|:(\d{2}))?/);let endAt=null;if(range){let eh=Number(range[1]),em=Number(range[2]||0);if(eh<h)eh+=12;const end=new Date(`${y}-${pad_(m)}-${pad_(d)}T${pad_(eh)}:${pad_(em)}:00+09:00`);if(end>at)endAt=end.toISOString();} return {date:`${y}-${pad_(m)}-${pad_(d)}`,at:at.toISOString(),endAt};
 }
 function pad_(n) { return String(n).padStart(2,'0'); }
+function strongCompanyName_(sender) {
+  // A display name is accepted only when it includes a Japanese legal-company
+  // marker.  Generic recruiting senders and group-wide notification addresses
+  // deliberately remain unresolved for a single confirmation candidate.
+  const display=String(sender||'').replace(/<[^>]+>/g,'').replace(/[【\[（(].*?[】\]）)]/g,' ').replace(/(採用|人事|新卒|キャリア|リクルーティング|Recruiting|採用担当|運営).*/ig,'').trim();
+  return /(?:株式会社|有限会社|合同会社|一般社団法人|一般財団法人)/.test(display) && display.length <= 80 ? display : null;
+}
 function toFinding_(message, now) {
   const heads=Object.fromEntries((message.payload.headers||[]).map(h=>[h.name.toLowerCase(),h.value])), subject=heads.subject||'', text=extractText_(message.payload), all=subject+'\n'+text, receivedAt=new Date(Number(message.internalDate)).toISOString(), type=classify_(all), actionType=actionType_(type), parsed=parseDateTime_(all,receivedAt), urls=(text.match(/https?:\/\/[^\s<>"']+/g)||[]).slice(0,10);
-  const due=/deadline|required|reservation|document/i.test(actionType||'')&&parsed?(parsed.at||new Date(`${parsed.date}T23:59:00+09:00`).toISOString()):null, starts=/scheduled|invitation/i.test(actionType||'')&&parsed?.at?parsed.at:null, sender=heads.from||'', gmailAccountIndex=PropertiesService.getScriptProperties().getProperty('GMAIL_ACCOUNT_INDEX')||'0', search=`https://mail.google.com/mail/u/${encodeURIComponent(gmailAccountIndex)}/#search/${encodeURIComponent(`from:(${sender.match(/<([^>]+)>/)?.[1]||sender}) subject:(${subject.replace(/"/g,'').slice(0,120)})`)}`, myPageUrl=urls.find(url=>/^https:\/\//i.test(url)&&/mypage|my-page|entry|recruit|career/i.test(url)&&/マイページ|MyPage|ログイン|採用/i.test(all))||null;
-  return {finding_type:type,source_external_id:message.id,source_thread_id:message.threadId,source_url:search,source_timestamp:receivedAt,observed_at:now.toISOString(),company:null,confidence:actionType&&(due||starts||/completed|offer|rejection|mypage/.test(type))?.92:(type==='marketing'||type==='no_action'?.9:.55),evidence_excerpt:(subject+' — '+text).slice(0,800),action_type:actionType,action_due_at:due,action_starts_at:starts,action_ends_at:starts&&parsed?.endAt?parsed.endAt:null,payload:{subject,sender,attachment:hasAttachment_(message.payload),urls,myPageUrl,actionType,actionTitle:subject,dueAt:due,startsAt:starts,endsAt:starts&&parsed?.endAt?parsed.endAt:null},fingerprint:`gmail:${message.id}:${type}`};
+  const due=/deadline|required|reservation|document/i.test(actionType||'')&&parsed?(parsed.at||new Date(`${parsed.date}T23:59:00+09:00`).toISOString()):null, starts=/scheduled|invitation/i.test(actionType||'')&&parsed?.at?parsed.at:null, sender=heads.from||'', rfcMessageId=String(heads['message-id']||'').trim(), account=String(PropertiesService.getScriptProperties().getProperty('EXPECTED_GMAIL_ACCOUNT')||'fuji.sh1215@gmail.com').trim(), fallback=`from:(${sender.match(/<([^>]+)>/)?.[1]||sender}) subject:(${subject.replace(/"/g,'').slice(0,120)})`, query=rfcMessageId?`rfc822msgid:${rfcMessageId}`:fallback, search=`https://mail.google.com/mail/?authuser=${encodeURIComponent(account)}#search/${encodeURIComponent(query)}`, myPageUrl=urls.find(url=>/^https:\/\//i.test(url)&&/mypage|my-page|entry|recruit|career/i.test(url)&&/マイページ|MyPage|ログイン|採用/i.test(all))||null;
+  const companyName=strongCompanyName_(sender);
+  return {finding_type:type,source_external_id:message.id,source_thread_id:message.threadId,source_url:search,source_timestamp:receivedAt,observed_at:now.toISOString(),company:companyName,confidence:actionType&&(due||starts||/completed|offer|rejection|mypage/.test(type))?.92:(type==='marketing'||type==='no_action'?.9:.55),evidence_excerpt:(subject+' — '+text).slice(0,800),action_type:actionType,action_due_at:due,action_starts_at:starts,action_ends_at:starts&&parsed?.endAt?parsed.endAt:null,payload:{subject,sender,companyName,rfcMessageId,gmailAccount:account,attachment:hasAttachment_(message.payload),urls,myPageUrl,actionType,actionTitle:subject,dueAt:due,startsAt:starts,endsAt:starts&&parsed?.endAt?parsed.endAt:null},fingerprint:`gmail:${message.id}:${type}`};
 }
 function decodeBody_(data) {
   if (!data) return '';

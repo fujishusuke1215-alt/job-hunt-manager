@@ -3,6 +3,8 @@ import type { AppDataV2, AppMode, SyncStatus } from '../domain/types'
 import { createAiAnalysisExport, createV2Backup } from '../domain/backup'
 import type { ImportPreview } from '../repositories/types'
 import type { CsvPreview } from '../services/monitoringCsv'
+import type { CollectorStateSummary } from '../repositories/supabaseStorage'
+import type { CollectorFinding } from '../services/collectorFindings'
 
 interface DataToolsProps {
   mode: AppMode
@@ -15,6 +17,9 @@ interface DataToolsProps {
   onCommitCsvImport?: (preview: CsvPreview) => Promise<void>
   onClear: () => void
   onResetDemo: () => void
+  accountEmail?: string
+  collectorStates?: CollectorStateSummary[]
+  collectorFindings?: CollectorFinding[]
 }
 
 function downloadJson(contents: string, filename: string) {
@@ -38,6 +43,9 @@ export function DataTools({
   onCommitCsvImport,
   onClear,
   onResetDemo,
+  accountEmail,
+  collectorStates = [],
+  collectorFindings = [],
 }: DataToolsProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [message, setMessage] = useState('')
@@ -47,6 +55,9 @@ export function DataTools({
   const [includeNotes, setIncludeNotes] = useState(false)
   const csvFileRef = useRef<HTMLInputElement>(null)
   const [csvPreview, setCsvPreview] = useState<CsvPreview | null>(null)
+  const gmailState = collectorStates.find((state) => state.collectorType === 'gmail')
+  const lastGmailSuccess = gmailState?.lastSuccess ?? null
+  const manualExceptions = collectorFindings.filter((finding) => finding.status === 'new' || finding.status === 'needs_review').length
 
   const exportData = () => {
     downloadJson(createV2Backup(data), `job-hunt-manager-backup-v2-${new Date().toISOString().slice(0, 10)}.json`)
@@ -112,6 +123,8 @@ export function DataTools({
         <div className="mode-banner-icon" aria-hidden="true">{mode === 'demo' ? 'D' : 'P'}</div>
         <div><strong>{mode === 'demo' ? '公開デモモード' : '本人用モード'}</strong><p>{mode === 'demo' ? '完全な架空データです。変更しても再読み込みで初期状態へ戻せます。' : `${storageLabel} / 状態: ${syncStatus}。秘密情報やOAuth tokenはデータへ保存しません。`}</p></div>
       </div>
+
+      {mode === 'personal' && <article className="panel connection-panel"><div className="panel-heading compact"><div><p className="eyebrow">CONNECTIONS &amp; COST</p><h2>接続状況</h2></div><span className="panel-count">Free</span></div><div className="connection-grid"><div><strong>アプリログイン</strong><span>{accountEmail ?? '未接続'}</span></div><div><strong>Gmail Collector</strong><span>{gmailState?.lastErrorCategory ? `要確認: ${gmailState.lastErrorCategory}` : lastGmailSuccess ? `最終成功 ${new Date(lastGmailSuccess).toLocaleString('ja-JP')}` : '成功記録なし'}</span></div><div><strong>日次自動処理</strong><span>{gmailState?.lastErrorCategory ? '失敗を確認してください' : 'Apps Script の日次実行を使用'}</span></div><div><strong>例外・監査</strong><span>要確認 {manualExceptions}件（詳細は監査画面）</span></div><div><strong>保存先</strong><span>{storageLabel}</span></div><div><strong>費用</strong><span>確認済みの無料範囲のみ使用</span></div></div><p className="panel-description">OAuth token・メール本文・MyPage Login ID・Collector secretはこの画面に表示しません。</p></article>}
 
       {message && <div className={isError ? 'notice error' : 'notice success'} role="status">{message}</div>}
       {preview && (

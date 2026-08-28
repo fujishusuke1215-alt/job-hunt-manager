@@ -122,6 +122,7 @@ export interface SelectionEvent {
   startsAt?: string | null
   endsAt?: string | null
   sourceMessageId?: string | null
+  sourceRfcMessageId?: string | null
   sourceThreadId?: string | null
   sourceSubject?: string | null
   sourceUrl?: string | null
@@ -331,7 +332,7 @@ export interface CompanyFilters {
   priority: Priority | 'すべて'
   eligibility: Eligibility | 'すべて'
   deadline: 'すべて' | '7日以内' | '期限超過' | '期限なし'
-  sort: '締切が近い順' | '総合点が高い順' | '更新が新しい順' | '企業名順'
+  sort: '締切が近い順' | '総合点が高い順' | '更新が新しい順' | '企業名順' | `評価項目:${string}`
 }
 
 export interface UserCompanyDraft {

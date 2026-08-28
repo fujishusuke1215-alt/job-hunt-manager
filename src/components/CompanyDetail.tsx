@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CompanyView, ResearchFact, ScoringProfile, SelectionEvent } from '../domain/types'
 import { eventStatuses, eventTypes } from '../domain/types'
 import { isSafeHttpUrl } from '../domain/schemas'
@@ -14,6 +14,7 @@ interface CompanyDetailProps {
   onEdit: () => void
   onUpdateEvents: (events: SelectionEvent[]) => void
   onSaveFact: (fact: ResearchFact) => void
+  highlightedEventId?: string | null
 }
 
 const blankEvent = (): Omit<SelectionEvent, 'id'> => ({
@@ -32,11 +33,20 @@ const toDatetimeLocalValue = (value: string) => {
   return local.toISOString().slice(0, 16)
 }
 
-export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, onSaveFact }: CompanyDetailProps) {
+export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, onSaveFact, highlightedEventId = null }: CompanyDetailProps) {
   const { company } = view
   const [draft, setDraft] = useState(blankEvent)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
+  const highlightedRef = useRef<HTMLElement | null>(null)
+  const currentEvents = company.events.filter((event) => !['完了', '見送り'].includes(event.status))
+  const historyEvents = company.events.filter((event) => ['完了', '見送り'].includes(event.status))
+  const focusedEvent = highlightedEventId ? company.events.find((event) => event.id === highlightedEventId) ?? null : null
+
+  useEffect(() => {
+    if (highlightedEventId) highlightedRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [highlightedEventId])
 
   const submitEvent = (event: React.FormEvent) => {
     event.preventDefault()
@@ -117,17 +127,20 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
           <ResearchFactsPanel facts={view.facts} userCompanyId={company.id} masterCompanyId={company.masterCompanyId} onSave={onSaveFact} />
 
           <section className="detail-section full-width">
-            <div className="section-heading"><h3>選考予定・面接情報</h3><span>{company.events.length}件</span></div>
+            <div className="section-heading"><h3>現在の選考・予定</h3><span>{currentEvents.length}件</span></div>
+            {focusedEvent && <div className="notice action-focus"><strong>このアクションを確認中</strong><span>{focusedEvent.title || focusedEvent.type} · {new Date(focusedEvent.dueAt ?? focusedEvent.startsAt ?? focusedEvent.scheduledAt).toLocaleString('ja-JP')}</span></div>}
             <div className="event-list">
-              {[...company.events].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()).map((event) => (
-                <article className="event-row" key={event.id}>
+              {[...currentEvents].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()).map((event) => (
+                <article className={event.id === highlightedEventId ? 'event-row highlighted-event' : 'event-row'} key={event.id} ref={event.id === highlightedEventId ? highlightedRef : undefined}>
                   <div className={`event-date ${deadlineTone(event.scheduledAt)}`}><strong>{new Date(event.scheduledAt).getDate()}</strong><span>{new Date(event.scheduledAt).toLocaleDateString('ja-JP', { month: 'short' })}</span></div>
                   <div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(event.scheduledAt).toLocaleString('ja-JP')} {event.location && `· ${event.location}`}</p>{event.memo && <small>{event.memo}</small>}<span className="action-source-links detail-action-links">{event.myPageUrl && <a href={event.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{event.sourceUrl && <a href={event.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span></div>
                   <div className="event-actions"><strong className={deadlineTone(event.scheduledAt)}>{formatDeadlineLabel(event.scheduledAt)}</strong><button type="button" onClick={() => startEdit(event)}>編集</button><button className="danger-link" type="button" onClick={() => deleteEvent(event.id)}>削除</button></div>
                 </article>
               ))}
-              {company.events.length === 0 && <p className="muted-message">選考予定はまだありません。</p>}
+              {currentEvents.length === 0 && <p className="muted-message">未完了の選考予定はありません。</p>}
             </div>
+
+            {historyEvents.length > 0 && <div className="event-history"><button className="text-button" type="button" onClick={() => setShowHistory((value) => !value)}>{showHistory ? '履歴を閉じる' : `選考履歴 ${historyEvents.length}件を表示`}</button>{showHistory && <div className="event-list history-list">{[...historyEvents].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()).map((event) => <article className="event-row" key={event.id}><div className="event-date"><strong>{new Date(event.scheduledAt).getDate()}</strong><span>{new Date(event.scheduledAt).toLocaleDateString('ja-JP', { month: 'short' })}</span></div><div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(event.scheduledAt).toLocaleString('ja-JP')}</p></div><div className="event-actions"><button type="button" onClick={() => startEdit(event)}>編集</button></div></article>)}</div>}</div>}
 
             <form className="event-form" onSubmit={submitEvent}>
               <h4>{editingId ? '選考予定を編集' : '選考予定を追加'}</h4>

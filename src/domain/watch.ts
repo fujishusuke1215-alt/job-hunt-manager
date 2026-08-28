@@ -36,6 +36,7 @@ export interface TodayAction {
   sourceUrl?: string | null
   myPageUrl?: string | null
   sourceSubject?: string | null
+  selectionEventId?: string
 }
 
 export interface RankedTodayAction extends TodayAction {
@@ -228,6 +229,7 @@ function selectionEventToAction(
     sourceUrl: event.sourceUrl,
     myPageUrl: event.myPageUrl,
     sourceSubject: event.sourceSubject,
+    selectionEventId: event.id,
   }
 }
 
