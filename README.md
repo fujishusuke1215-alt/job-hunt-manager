@@ -19,7 +19,8 @@
 - Gmail本文から期限・面接日時・対応種別を解析し、根拠付きActionとして自動反映
 - 今日の要対応、直近7日、日程競合と企業評価の比較を確認するダッシュボード
 - ActionからMyPageと元Gmail検索を直接開く導線
-- 評価項目と重み付けを変更できるランキング
+- 企業ごとの評価値を一度だけ保持し、目的別Profileでは重み付けだけを切り替えるランキング
+- 高確度の採用メールだけから、新規企業・監視対象・限定Gmail backfillを安全にオンボーディング
 - CSV の preview / validation を経由した候補企業と監視対象の初期登録
 - Collector evidence の企業解決、自動処理、重複防止、監査ログ
 - 応募候補の追加・更新から監視対象を派生させる Dynamic Monitoring
@@ -92,5 +93,7 @@ pnpm run test:collector
 ## Owner automation flow
 
 新しい企業を保存すると監視対象が同期され、企業名・別名・送信元ドメインに絞ったGmail backfill requestをキューへ登録できます。Owner Apps Scriptの日次処理がキューを消化するため、ブラウザからGmail Restricted APIを呼びません。既存Findingを再処理する前には本人DBのバックアップを取得し、公開リポジトリには含めません。
+
+ランキングの評価値は企業ごとに一つだけ保持します。Profileを切り替えても値の再入力や確定評価の上書きは発生せず、同じ評価値に対する重みだけが変わります。未評価は0点として補完せず、一覧・比較では末尾に表示します。
 
 詳しい制作意図と面接向けの説明は [docs/PORTFOLIO_DESCRIPTION.md](docs/PORTFOLIO_DESCRIPTION.md) にまとめています。
