@@ -244,6 +244,21 @@ describe('AppDataV2 runtime integrity', () => {
     expect(parsed.watchFindings[0].source?.retrievedAt).toBe('2026-08-26T12:34:13.000Z')
   })
 
+  it('collector eventのPostgreSQL timestamptzをcanonical ISOへ正規化する', () => {
+    const legacy = richAppData()
+    legacy.userCompanies[0].events[0] = {
+      ...legacy.userCompanies[0].events[0],
+      dueAt: '2026-09-01 09:00:00+00',
+      startsAt: '2026-09-03 05:00:00+00',
+      endsAt: '2026-09-03 06:00:00+00',
+    }
+
+    const parsed = parseAppDataV2(legacy)
+    expect(parsed.userCompanies[0].events[0].dueAt).toBe('2026-09-01T09:00:00.000Z')
+    expect(parsed.userCompanies[0].events[0].startsAt).toBe('2026-09-03T05:00:00.000Z')
+    expect(parsed.userCompanies[0].events[0].endsAt).toBe('2026-09-03T06:00:00.000Z')
+  })
+
   it('invalid optional legacy source datetime is isolated as null', () => {
     const legacy = richAppData()
     legacy.watchFindings[0].source = {
