@@ -246,14 +246,24 @@ describe('AppDataV2 runtime integrity', () => {
 
   it('collector eventのPostgreSQL timestamptzをcanonical ISOへ正規化する', () => {
     const legacy = richAppData()
+    legacy.userCompanies[0].createdAt = '2026-08-20 12:34:13+00'
+    legacy.userCompanies[0].updatedAt = '2026-08-21 12:34:13+00'
+    legacy.userCompanies[0].selectionStageUpdatedAt = '2026-08-22 12:34:13+00'
+    legacy.userCompanies[0].lastCompanyInteractionAt = '2026-08-23 12:34:13+00'
     legacy.userCompanies[0].events[0] = {
       ...legacy.userCompanies[0].events[0],
+      scheduledAt: '2026-09-03 05:00:00+00',
       dueAt: '2026-09-01 09:00:00+00',
       startsAt: '2026-09-03 05:00:00+00',
       endsAt: '2026-09-03 06:00:00+00',
     }
 
     const parsed = parseAppDataV2(legacy)
+    expect(parsed.userCompanies[0].createdAt).toBe('2026-08-20T12:34:13.000Z')
+    expect(parsed.userCompanies[0].updatedAt).toBe('2026-08-21T12:34:13.000Z')
+    expect(parsed.userCompanies[0].selectionStageUpdatedAt).toBe('2026-08-22T12:34:13.000Z')
+    expect(parsed.userCompanies[0].lastCompanyInteractionAt).toBe('2026-08-23T12:34:13.000Z')
+    expect(parsed.userCompanies[0].events[0].scheduledAt).toBe('2026-09-03T05:00:00.000Z')
     expect(parsed.userCompanies[0].events[0].dueAt).toBe('2026-09-01T09:00:00.000Z')
     expect(parsed.userCompanies[0].events[0].startsAt).toBe('2026-09-03T05:00:00.000Z')
     expect(parsed.userCompanies[0].events[0].endsAt).toBe('2026-09-03T06:00:00.000Z')
