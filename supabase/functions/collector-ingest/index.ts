@@ -59,7 +59,8 @@ Deno.serve(async (request) => {
   if (confirmedError) return new Response('notification confirmation failed', { status: 500 })
   const { data: events, error: eventsError } = await admin.rpc('apply_auto_collector_events', { p_user_id: owner, p_limit: 500 })
   if (eventsError) return new Response('event reflection failed', { status: 500 })
-  const { error: rfcError } = await admin.rpc('attach_collector_rfc_message_ids', { p_user_id: owner })
-  if (rfcError) return new Response('RFC message linkage failed', { status: 500 })
+  // New Gmail findings already carry a stable Gmail search URL. Historical RFC
+  // enrichment is deliberately kept out of the synchronous ingest path so a
+  // large personal history cannot delay action generation.
   return Response.json({ accepted: rows.length, triage: Array.isArray(triage) ? triage[0] ?? null : triage, confirmed: Array.isArray(confirmed) ? confirmed[0] ?? null : confirmed, events: Array.isArray(events) ? events[0] ?? null : events })
 })

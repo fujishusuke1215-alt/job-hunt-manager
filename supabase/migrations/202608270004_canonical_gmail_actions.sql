@@ -17,7 +17,7 @@ create table if not exists public.gmail_backfill_requests (
   status text not null default 'queued' check (status in ('queued','running','completed','failed')),
   requested_at timestamptz not null default now(), started_at timestamptz, completed_at timestamptz,
   last_error text, result_count integer not null default 0 check (result_count >= 0),
-  unique (user_id, monitoring_target_id, status) deferrable initially immediate
+  unique (user_id, monitoring_target_id, status)
 );
 alter table public.gmail_backfill_requests enable row level security;
 create policy "gmail_backfill_requests owner" on public.gmail_backfill_requests for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
