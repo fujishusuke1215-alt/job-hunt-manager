@@ -535,8 +535,13 @@ export function normalizeAppDataV2DateTimes(input: unknown): unknown {
   if (Array.isArray(normalized.userCompanies)) {
     normalized.userCompanies.forEach((company) => {
       if (!isRecord(company) || !Array.isArray(company.events)) return
+      normalizeOptionalTimestamp(company, 'createdAt')
+      normalizeOptionalTimestamp(company, 'updatedAt')
+      normalizeOptionalTimestamp(company, 'selectionStageUpdatedAt')
+      normalizeOptionalTimestamp(company, 'lastCompanyInteractionAt')
       company.events.forEach((event) => {
         if (!isRecord(event)) return
+        normalizeOptionalTimestamp(event, 'scheduledAt')
         normalizeOptionalTimestamp(event, 'dueAt')
         normalizeOptionalTimestamp(event, 'startsAt')
         normalizeOptionalTimestamp(event, 'endsAt')

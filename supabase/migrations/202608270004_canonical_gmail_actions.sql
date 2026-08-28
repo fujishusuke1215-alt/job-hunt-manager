@@ -69,20 +69,20 @@ begin
     end if;
     action_kind := coalesce(finding.action_type, finding.payload->>'actionType');
     if finding.finding_type in ('entry_completed','entry_receipt','application_completed') then
-      event_type := 'エントリー'; event_status := '完了'; scheduled_at := coalesce(finding.source_timestamp, finding.observed_at)::text;
+      event_type := 'エントリー'; event_status := '完了'; scheduled_at := to_char(coalesce(finding.source_timestamp, finding.observed_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
     elsif finding.finding_type in ('es_submitted','document_submitted') then
-      event_type := 'ES'; event_status := '完了'; scheduled_at := coalesce(finding.source_timestamp, finding.observed_at)::text;
+      event_type := 'ES'; event_status := '完了'; scheduled_at := to_char(coalesce(finding.source_timestamp, finding.observed_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
     elsif finding.finding_type = 'web_test_completed' then
-      event_type := 'Webテスト'; event_status := '完了'; scheduled_at := coalesce(finding.source_timestamp, finding.observed_at)::text;
+      event_type := 'Webテスト'; event_status := '完了'; scheduled_at := to_char(coalesce(finding.source_timestamp, finding.observed_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
     elsif finding.finding_type in ('rejection','offer','result_notice') then
-      event_type := 'その他'; event_status := case when finding.finding_type = 'rejection' then '見送り' else '結果待ち' end; scheduled_at := coalesce(finding.source_timestamp, finding.observed_at)::text;
+      event_type := 'その他'; event_status := case when finding.finding_type = 'rejection' then '見送り' else '結果待ち' end; scheduled_at := to_char(coalesce(finding.source_timestamp, finding.observed_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
     elsif action_kind in ('ES_DEADLINE','WEB_TEST_DEADLINE','INTERVIEW_RESERVATION_REQUIRED','DOCUMENT_REQUIRED','INTERVIEW_SCHEDULED','EVENT_SCHEDULED','EVENT_INVITATION')
       and coalesce(finding.action_due_at, finding.action_starts_at) is not null then
       event_type := case when action_kind like 'WEB_TEST%' then 'Webテスト'
         when action_kind like 'INTERVIEW%' then '面接'
         when action_kind like 'EVENT%' then '説明会'
         when action_kind like 'DOCUMENT%' or action_kind like 'ES%' then 'ES' else 'その他' end;
-      event_status := '予定'; scheduled_at := coalesce(finding.action_starts_at, finding.action_due_at)::text;
+      event_status := '予定'; scheduled_at := to_char(coalesce(finding.action_starts_at, finding.action_due_at) at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
     else
       update public.collector_findings set auto_event_id = 'not-actionable', updated_at = now() where id = finding.id;
       skipped_count := skipped_count + 1; continue;
