@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { CompanyView, ResearchFact, ScoringProfile, SelectionEvent } from '../domain/types'
 import { eventStatuses, eventTypes } from '../domain/types'
 import { isSafeHttpUrl } from '../domain/schemas'
@@ -33,20 +33,17 @@ const toDatetimeLocalValue = (value: string) => {
   return local.toISOString().slice(0, 16)
 }
 
+const eventDateTime = (event: SelectionEvent) => event.dueAt ?? event.startsAt ?? event.scheduledAt
+
 export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, onSaveFact, highlightedEventId = null }: CompanyDetailProps) {
   const { company } = view
   const [draft, setDraft] = useState(blankEvent)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [showHistory, setShowHistory] = useState(false)
-  const highlightedRef = useRef<HTMLElement | null>(null)
-  const currentEvents = company.events.filter((event) => !['完了', '見送り'].includes(event.status))
+  const currentEvents = company.events.filter((event) => event.status === '予定' || event.status === '結果待ち')
   const historyEvents = company.events.filter((event) => ['完了', '見送り'].includes(event.status))
   const focusedEvent = highlightedEventId ? company.events.find((event) => event.id === highlightedEventId) ?? null : null
-
-  useEffect(() => {
-    if (highlightedEventId) highlightedRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
-  }, [highlightedEventId])
 
   const submitEvent = (event: React.FormEvent) => {
     event.preventDefault()
@@ -79,6 +76,10 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
     if (window.confirm('この選考予定を削除しますか？')) onUpdateEvents(company.events.filter((event) => event.id !== id))
   }
 
+  const completeEvent = (id: string) => {
+    onUpdateEvents(company.events.map((event) => event.id === id ? { ...event, status: '完了' } : event))
+  }
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <section className="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="company-detail-title">
@@ -97,6 +98,38 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
             <div className="interest-stars" aria-label={`志望度 ${company.interest} / 5`}><span>志望度</span><strong>{'★'.repeat(company.interest)}{'☆'.repeat(5 - company.interest)}</strong></div>
             <button className="secondary-button" type="button" onClick={onEdit}>企業情報を編集</button>
           </div>
+
+          <section className="detail-section full-width">
+            <div className="section-heading"><h3>現在の選考・予定</h3><span>{currentEvents.length}件</span></div>
+            {focusedEvent && <div className="notice action-focus"><strong>このアクションを確認中</strong><span>{focusedEvent.title || focusedEvent.type} · {new Date(eventDateTime(focusedEvent)).toLocaleString('ja-JP')}</span></div>}
+            <div className="event-list">
+              {[...currentEvents].sort((a, b) => new Date(eventDateTime(a)).getTime() - new Date(eventDateTime(b)).getTime()).map((event) => (
+                <article className={event.id === highlightedEventId ? 'event-row todo-event-row highlighted-event' : 'event-row todo-event-row'} key={event.id}>
+                  <button className="todo-complete-button" type="button" aria-label={`${event.title || event.type}を完了にする`} onClick={() => completeEvent(event.id)}>✓</button>
+                  <div className={`event-date ${deadlineTone(eventDateTime(event))}`}><strong>{new Date(eventDateTime(event)).getDate()}</strong><span>{new Date(eventDateTime(event)).toLocaleDateString('ja-JP', { month: 'short' })}</span></div>
+                  <div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(eventDateTime(event)).toLocaleString('ja-JP')} {event.location && `· ${event.location}`}</p>{event.memo && <small>{event.memo}</small>}<span className="action-source-links detail-action-links">{event.myPageUrl && <a href={event.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{event.sourceUrl && <a href={event.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span></div>
+                  <div className="event-actions"><strong className={deadlineTone(eventDateTime(event))}>{formatDeadlineLabel(eventDateTime(event))}</strong><button type="button" onClick={() => startEdit(event)}>編集</button><button className="danger-link" type="button" onClick={() => deleteEvent(event.id)}>削除</button></div>
+                </article>
+              ))}
+              {currentEvents.length === 0 && <p className="muted-message">未完了の選考予定はありません。</p>}
+            </div>
+
+            {historyEvents.length > 0 && <div className="event-history"><button className="text-button" type="button" onClick={() => setShowHistory((value) => !value)}>{showHistory ? '履歴を閉じる' : `選考履歴 ${historyEvents.length}件を表示`}</button>{showHistory && <div className="event-list history-list">{[...historyEvents].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()).map((event) => <article className="event-row" key={event.id}><div className="event-date"><strong>{new Date(event.scheduledAt).getDate()}</strong><span>{new Date(event.scheduledAt).toLocaleDateString('ja-JP', { month: 'short' })}</span></div><div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(event.scheduledAt).toLocaleString('ja-JP')}</p></div><div className="event-actions"><button type="button" onClick={() => startEdit(event)}>編集</button></div></article>)}</div>}</div>}
+
+            <form className="event-form" onSubmit={submitEvent}>
+              <h4>{editingId ? '選考予定を編集' : '選考予定を追加'}</h4>
+              {error && <div className="form-error" role="alert">{error}</div>}
+              <div className="form-grid three-columns">
+                <label className="field"><span>種別</span><select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value as SelectionEvent['type'] })}>{eventTypes.map((item) => <option key={item}>{item}</option>)}</select></label>
+                <label className="field"><span>予定名 <em>必須</em></span><input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="例: 一次面接" /></label>
+                <label className="field"><span>日時 <em>必須</em></span><input type="datetime-local" value={draft.scheduledAt} onChange={(event) => setDraft({ ...draft, scheduledAt: event.target.value })} /></label>
+                <label className="field"><span>状態</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as SelectionEvent['status'] })}>{eventStatuses.map((item) => <option key={item}>{item}</option>)}</select></label>
+                <label className="field"><span>場所・URL</span><input value={draft.location} onChange={(event) => setDraft({ ...draft, location: event.target.value })} placeholder="例: オンライン" /></label>
+                <label className="field"><span>メモ</span><input value={draft.memo} onChange={(event) => setDraft({ ...draft, memo: event.target.value })} placeholder="ダミー情報のみ" /></label>
+              </div>
+              <div className="inline-actions">{editingId && <button type="button" className="secondary-button" onClick={() => { setEditingId(null); setDraft(blankEvent()); setError('') }}>編集をやめる</button>}<button className="primary-button small" type="submit">{editingId ? '予定を更新' : '予定を追加'}</button></div>
+            </form>
+          </section>
 
           <div className="detail-grid">
             <section className="detail-section">
@@ -125,37 +158,6 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
           </div>
 
           <ResearchFactsPanel facts={view.facts} userCompanyId={company.id} masterCompanyId={company.masterCompanyId} onSave={onSaveFact} />
-
-          <section className="detail-section full-width">
-            <div className="section-heading"><h3>現在の選考・予定</h3><span>{currentEvents.length}件</span></div>
-            {focusedEvent && <div className="notice action-focus"><strong>このアクションを確認中</strong><span>{focusedEvent.title || focusedEvent.type} · {new Date(focusedEvent.dueAt ?? focusedEvent.startsAt ?? focusedEvent.scheduledAt).toLocaleString('ja-JP')}</span></div>}
-            <div className="event-list">
-              {[...currentEvents].sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()).map((event) => (
-                <article className={event.id === highlightedEventId ? 'event-row highlighted-event' : 'event-row'} key={event.id} ref={event.id === highlightedEventId ? highlightedRef : undefined}>
-                  <div className={`event-date ${deadlineTone(event.scheduledAt)}`}><strong>{new Date(event.scheduledAt).getDate()}</strong><span>{new Date(event.scheduledAt).toLocaleDateString('ja-JP', { month: 'short' })}</span></div>
-                  <div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(event.scheduledAt).toLocaleString('ja-JP')} {event.location && `· ${event.location}`}</p>{event.memo && <small>{event.memo}</small>}<span className="action-source-links detail-action-links">{event.myPageUrl && <a href={event.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{event.sourceUrl && <a href={event.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span></div>
-                  <div className="event-actions"><strong className={deadlineTone(event.scheduledAt)}>{formatDeadlineLabel(event.scheduledAt)}</strong><button type="button" onClick={() => startEdit(event)}>編集</button><button className="danger-link" type="button" onClick={() => deleteEvent(event.id)}>削除</button></div>
-                </article>
-              ))}
-              {currentEvents.length === 0 && <p className="muted-message">未完了の選考予定はありません。</p>}
-            </div>
-
-            {historyEvents.length > 0 && <div className="event-history"><button className="text-button" type="button" onClick={() => setShowHistory((value) => !value)}>{showHistory ? '履歴を閉じる' : `選考履歴 ${historyEvents.length}件を表示`}</button>{showHistory && <div className="event-list history-list">{[...historyEvents].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime()).map((event) => <article className="event-row" key={event.id}><div className="event-date"><strong>{new Date(event.scheduledAt).getDate()}</strong><span>{new Date(event.scheduledAt).toLocaleDateString('ja-JP', { month: 'short' })}</span></div><div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(event.scheduledAt).toLocaleString('ja-JP')}</p></div><div className="event-actions"><button type="button" onClick={() => startEdit(event)}>編集</button></div></article>)}</div>}</div>}
-
-            <form className="event-form" onSubmit={submitEvent}>
-              <h4>{editingId ? '選考予定を編集' : '選考予定を追加'}</h4>
-              {error && <div className="form-error" role="alert">{error}</div>}
-              <div className="form-grid three-columns">
-                <label className="field"><span>種別</span><select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value as SelectionEvent['type'] })}>{eventTypes.map((item) => <option key={item}>{item}</option>)}</select></label>
-                <label className="field"><span>予定名 <em>必須</em></span><input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="例: 一次面接" /></label>
-                <label className="field"><span>日時 <em>必須</em></span><input type="datetime-local" value={draft.scheduledAt} onChange={(event) => setDraft({ ...draft, scheduledAt: event.target.value })} /></label>
-                <label className="field"><span>状態</span><select value={draft.status} onChange={(event) => setDraft({ ...draft, status: event.target.value as SelectionEvent['status'] })}>{eventStatuses.map((item) => <option key={item}>{item}</option>)}</select></label>
-                <label className="field"><span>場所・URL</span><input value={draft.location} onChange={(event) => setDraft({ ...draft, location: event.target.value })} placeholder="例: オンライン" /></label>
-                <label className="field"><span>メモ</span><input value={draft.memo} onChange={(event) => setDraft({ ...draft, memo: event.target.value })} placeholder="ダミー情報のみ" /></label>
-              </div>
-              <div className="inline-actions">{editingId && <button type="button" className="secondary-button" onClick={() => { setEditingId(null); setDraft(blankEvent()); setError('') }}>編集をやめる</button>}<button className="primary-button small" type="submit">{editingId ? '予定を更新' : '予定を追加'}</button></div>
-            </form>
-          </section>
 
           {company.memo && <section className="detail-section full-width memo-box"><h3>個人メモ</h3><p>{company.memo}</p></section>}
         </div>

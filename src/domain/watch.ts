@@ -37,6 +37,9 @@ export interface TodayAction {
   myPageUrl?: string | null
   sourceSubject?: string | null
   selectionEventId?: string
+  watchFindingId?: string
+  /** 完了前の状態。Undo はこの値へ戻します。 */
+  status: SelectionEventStatus | WatchFindingStatus
 }
 
 export interface RankedTodayAction extends TodayAction {
@@ -230,6 +233,7 @@ function selectionEventToAction(
     myPageUrl: event.myPageUrl,
     sourceSubject: event.sourceSubject,
     selectionEventId: event.id,
+    status: event.status,
   }
 }
 
@@ -247,6 +251,8 @@ function watchFindingToAction(
     deadline: finding.deadline,
     severity: finding.severity,
     companyScore,
+    watchFindingId: finding.id,
+    status: finding.status,
   }
 }
 

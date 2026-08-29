@@ -120,6 +120,12 @@ function invalidIssuePaths(data: AppDataV2): string[] {
 }
 
 describe('AppDataV2 runtime integrity', () => {
+  it('keeps legacy local scheduledAt text when it has no timezone', () => {
+    const data = createDemoAppData()
+    expect(safeParseAppDataV2(data).success).toBe(true)
+    expect(parseAppDataV2(data).userCompanies[0].events[0].scheduledAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+  })
+
   it('空状態・v1移行結果・公開デモの正当データを受け付ける', () => {
     const migrated = migrateV1Companies(createDemoCompanies().slice(0, 1), { now: NOW })
 

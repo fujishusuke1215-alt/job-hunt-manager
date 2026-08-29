@@ -113,6 +113,7 @@ describe('transparent today-action ordering', () => {
       {
         id: 'no-deadline-high',
         source: 'watch_finding',
+        status: 'new',
         userCompanyId: 'uc_5',
         companyName: '架空E社',
         title: '重要な確認',
@@ -123,6 +124,7 @@ describe('transparent today-action ordering', () => {
       {
         id: 'three-days',
         source: 'watch_finding',
+        status: 'seen',
         userCompanyId: 'uc_3',
         companyName: '架空C社',
         title: '3日以内',
@@ -133,6 +135,7 @@ describe('transparent today-action ordering', () => {
       {
         id: 'overdue',
         source: 'selection_event',
+        status: '予定',
         userCompanyId: 'uc_1',
         companyName: '架空A社',
         title: '期限超過',
@@ -143,6 +146,7 @@ describe('transparent today-action ordering', () => {
       {
         id: 'one-day-low-score',
         source: 'selection_event',
+        status: '結果待ち',
         userCompanyId: 'uc_2',
         companyName: '架空B社',
         title: '24時間以内',
@@ -153,6 +157,7 @@ describe('transparent today-action ordering', () => {
       {
         id: 'one-day-high-score',
         source: 'selection_event',
+        status: '予定',
         userCompanyId: 'uc_4',
         companyName: '架空D社',
         title: '24時間以内・高得点',

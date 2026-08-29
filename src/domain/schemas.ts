@@ -526,6 +526,14 @@ export function normalizeAppDataV2DateTimes(input: unknown): unknown {
   const normalizeOptionalTimestamp = (record: UnknownRecord, key: string) => {
     if (typeof record[key] === 'string') record[key] = canonicalIsoDateTime(record[key])
   }
+  // scheduledAt is the legacy required display field. Old local backups may
+  // contain a timezone-less local value, which is valid for that field even
+  // though it cannot be promoted to a canonical instant. Keep it intact.
+  const normalizeRequiredScheduledAt = (record: UnknownRecord) => {
+    if (typeof record.scheduledAt !== 'string') return
+    const canonical = canonicalIsoDateTime(record.scheduledAt)
+    if (canonical) record.scheduledAt = canonical
+  }
   const normalizeSource = (source: unknown) => {
     if (!isRecord(source)) return
     normalizeOptionalTimestamp(source, 'retrievedAt')
@@ -541,7 +549,7 @@ export function normalizeAppDataV2DateTimes(input: unknown): unknown {
       normalizeOptionalTimestamp(company, 'lastCompanyInteractionAt')
       company.events.forEach((event) => {
         if (!isRecord(event)) return
-        normalizeOptionalTimestamp(event, 'scheduledAt')
+        normalizeRequiredScheduledAt(event)
         normalizeOptionalTimestamp(event, 'dueAt')
         normalizeOptionalTimestamp(event, 'startsAt')
         normalizeOptionalTimestamp(event, 'endsAt')

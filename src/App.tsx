@@ -591,13 +591,17 @@ export default function App() {
     setSelectedEventId(action.selectionEventId ?? null)
     setView('companies')
   }
-  const setActionStatus = (action: TodayAction, status: SelectionEvent['status']) => {
-    if (action.source !== 'selection_event' || !action.selectionEventId) return
+  const setActionStatus = (action: TodayAction, status: TodayAction['status']) => {
     const now = new Date().toISOString()
+    if (action.source === 'watch_finding' && action.watchFindingId) {
+      commitData(touch(data, { watchFindings: updateWatchFindingStatus(data.watchFindings, action.watchFindingId, status as WatchFindingStatus) }, now))
+      return
+    }
+    if (action.source !== 'selection_event' || !action.selectionEventId) return
     commitData(touch(data, { userCompanies: data.userCompanies.map((company) => company.id !== action.userCompanyId ? company : {
       ...company,
       updatedAt: now,
-      events: company.events.map((event) => event.id === action.selectionEventId ? { ...event, status } : event),
+      events: company.events.map((event) => event.id === action.selectionEventId ? { ...event, status: status as SelectionEvent['status'] } : event),
     }) }, now))
   }
 
@@ -733,7 +737,7 @@ export default function App() {
           </section>
         ) : (
           <>
-            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} collectorFindings={collectorFindings} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} onOpenCollectorFindings={() => setView('findings')} onOpenAction={openAction} onCompleteAction={(action) => setActionStatus(action, '完了')} onUndoAction={(action) => setActionStatus(action, '予定')} />}
+            {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} collectorFindings={collectorFindings} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} onOpenCollectorFindings={() => setView('findings')} onOpenAction={openAction} onCompleteAction={(action) => setActionStatus(action, action.source === 'selection_event' ? '完了' : 'completed')} onUndoAction={(action) => setActionStatus(action, action.status)} />}
             {view === 'companies' && <CompanyList companies={companyViews} profile={profile} filters={filters} onFiltersChange={setFilters} onOpen={openCompany} onEdit={(companyId) => setFormState({ kind: 'edit', companyId })} onDelete={deleteCompany} onAdd={() => setFormState({ kind: 'add' })} />}
             {view === 'scoring' && <ScoringSettings data={data} onChange={commitData} />}
             {view === 'ai-sync' && <AiSync data={data} catalog={catalog} onChange={commitData} />}
