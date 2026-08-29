@@ -79,7 +79,7 @@ describe('Gmail collector Apps Script', () => {
 
     expect(finding.action_type).toBe('WEB_TEST_DEADLINE')
     expect(finding.action_due_at).toBe('2026-09-01T09:00:00.000Z')
-    expect(finding.source_url).toContain('/mail/u/collector%40example.test/#search/')
+    expect(finding.source_url).toContain('AccountChooser?Email=collector%40example.test')
     expect(finding.source_url).toContain('rfc822msgid')
     expect((finding.payload as Record<string, unknown>).rfcMessageId).toBe('<message-1@example.com>')
   })
