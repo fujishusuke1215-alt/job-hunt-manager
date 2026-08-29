@@ -739,7 +739,7 @@ export default function App() {
           <>
             {view === 'dashboard' && <Dashboard companies={companyViews} findings={data.watchFindings} collectorStates={collectorStates} collectorFindings={collectorFindings} onOpenCompany={openCompany} onAddCompany={() => setFormState({ kind: 'add' })} onOpenWatch={() => setView('watch')} onOpenCollectorFindings={() => setView('findings')} onOpenAction={openAction} onCompleteAction={(action) => setActionStatus(action, action.source === 'selection_event' ? '完了' : 'completed')} onUndoAction={(action) => setActionStatus(action, action.status)} />}
             {view === 'companies' && <CompanyList companies={companyViews} profile={profile} filters={filters} onFiltersChange={setFilters} onOpen={openCompany} onEdit={(companyId) => setFormState({ kind: 'edit', companyId })} onDelete={deleteCompany} onAdd={() => setFormState({ kind: 'add' })} />}
-            {view === 'scoring' && <ScoringSettings data={data} onChange={commitData} />}
+            {view === 'scoring' && <ScoringSettings data={data} onChange={commitData} hideDeveloperReference={mode === 'demo'} />}
             {view === 'ai-sync' && <AiSync data={data} catalog={catalog} onChange={commitData} />}
             {view === 'watch' && <WatchCenter companies={companyViews} findings={data.watchFindings} runs={data.watchRuns} onStatusChange={changeWatchStatus} onOpenCompany={openCompany} />}
             {view === 'findings' && <CollectorFindings findings={collectorFindings} companies={companyViews} onApprove={approveFinding} onReject={rejectFinding} />}

@@ -13,11 +13,16 @@ import { createId } from '../utils/id'
 interface ScoringSettingsProps {
   data: AppDataV2
   onChange: (next: AppDataV2) => void
+  hideDeveloperReference?: boolean
 }
 
-export function ScoringSettings({ data, onChange }: ScoringSettingsProps) {
-  const active = data.scoringProfiles.find((profile) => profile.id === data.activeScoringProfileId)
-    ?? data.scoringProfiles[0]
+export function ScoringSettings({ data, onChange, hideDeveloperReference = false }: ScoringSettingsProps) {
+  const filteredProfiles = hideDeveloperReference
+    ? data.scoringProfiles.filter((profile) => profile.id !== 'profile_developer_reference_v2')
+    : data.scoringProfiles
+  const visibleProfiles = filteredProfiles.length > 0 ? filteredProfiles : data.scoringProfiles
+  const active = visibleProfiles.find((profile) => profile.id === data.activeScoringProfileId)
+    ?? visibleProfiles[0]
   const [draft, setDraft] = useState<ScoringProfile>(active)
   const [newName, setNewName] = useState('')
   const [message, setMessage] = useState('')
@@ -101,7 +106,7 @@ export function ScoringSettings({ data, onChange }: ScoringSettingsProps) {
                 value={active.id}
                 onChange={(event) => onChange(setActiveProfile(data, event.target.value))}
               >
-                {data.scoringProfiles.map((profile) => (
+                {visibleProfiles.map((profile) => (
                   <option key={profile.id} value={profile.id}>{profile.name}</option>
                 ))}
               </select>
