@@ -8,6 +8,7 @@ import type { CollectorStateSummary } from '../repositories/supabaseStorage'
 import type { CollectorFinding } from '../services/collectorFindings'
 import { collectorUrgencyLabel, urgentPendingCollectorFindings } from '../services/collectorUrgency'
 import { detectScheduleConflicts } from '../domain/scheduleConflicts'
+import { buildGmailSourceUrl } from '../domain/gmailSource'
 
 interface DashboardProps {
   companies: CompanyView[]
@@ -41,6 +42,7 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
   const topCompanies = rankCompanyViews(companies).slice(0, 4)
   const rankByCompanyId = new Map(rankCompanyViews(companies).map((view) => [view.company.id, view.rank]))
   const webStates = collectorStates.filter((state) => state.collectorType === 'web')
+  const gmailAccount = collectorStates.find((state) => state.collectorType === 'gmail')?.gmailAccount ?? null
   const lastWebSuccess = webStates.map((state) => state.lastSuccess).filter((value): value is string => value !== null).sort().at(-1) ?? null
   const webFailures = webStates.filter((state) => state.failureCount > 0).length
   const webStale = !lastWebSuccess || Date.now() - new Date(lastWebSuccess).getTime() > 36 * 60 * 60 * 1000
@@ -88,7 +90,7 @@ export function Dashboard({ companies, findings, onOpenCompany, onAddCompany, on
                   <span className={`deadline-date ${item.deadline ? deadlineTone(item.deadline) : ''}`}><strong>{item.source === 'watch_finding' ? 'W' : new Date(item.deadline ?? '').getDate()}</strong><small>{item.source === 'watch_finding' ? 'WATCH' : new Date(item.deadline ?? '').toLocaleDateString('ja-JP', { month: 'short' })}</small></span>
                   <span className="deadline-copy"><strong>{item.companyName}</strong><small>{item.title}</small></span>
                   <span className={`deadline-badge ${item.deadline ? deadlineTone(item.deadline) : ''}`}>{item.deadline ? formatDeadlineLabel(item.deadline) : `Watch ${item.severity}`}</span>
-                </button></div>{item.source === 'selection_event' && (item.myPageUrl || item.sourceUrl) && <span className="action-source-links">{item.myPageUrl && <a href={item.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span>}</div>
+                </button></div>{item.source === 'selection_event' && (item.myPageUrl || buildGmailSourceUrl({ gmailAccount, sourceRfcMessageId: item.sourceRfcMessageId, legacySourceUrl: item.sourceUrl })) && <span className="action-source-links">{item.myPageUrl && <a href={item.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{buildGmailSourceUrl({ gmailAccount, sourceRfcMessageId: item.sourceRfcMessageId, legacySourceUrl: item.sourceUrl }) && <a href={buildGmailSourceUrl({ gmailAccount, sourceRfcMessageId: item.sourceRfcMessageId, legacySourceUrl: item.sourceUrl })!} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span>}</div>
               ))}</div>)}
               {completedActions.length > 0 && <div className="completed-action-strip"><span>完了にした項目</span>{completedActions.map((item) => <button className="text-button" type="button" onClick={() => undo(item)} key={item.id}>{item.companyName} / {item.title} を戻す</button>)}</div>}
             </div>

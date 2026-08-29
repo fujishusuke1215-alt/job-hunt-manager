@@ -6,6 +6,7 @@ import { deadlineTone, formatDeadlineLabel } from '../utils/deadlines'
 import { createId } from '../utils/id'
 import { ResearchFactsPanel } from './ResearchFactsPanel'
 import { selectionLabel } from '../domain/selection'
+import { buildGmailSourceUrl } from '../domain/gmailSource'
 
 interface CompanyDetailProps {
   view: CompanyView
@@ -15,6 +16,7 @@ interface CompanyDetailProps {
   onUpdateEvents: (events: SelectionEvent[]) => void
   onSaveFact: (fact: ResearchFact) => void
   highlightedEventId?: string | null
+  gmailAccount?: string | null
 }
 
 const blankEvent = (): Omit<SelectionEvent, 'id'> => ({
@@ -35,7 +37,7 @@ const toDatetimeLocalValue = (value: string) => {
 
 const eventDateTime = (event: SelectionEvent) => event.dueAt ?? event.startsAt ?? event.scheduledAt
 
-export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, onSaveFact, highlightedEventId = null }: CompanyDetailProps) {
+export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, onSaveFact, highlightedEventId = null, gmailAccount = null }: CompanyDetailProps) {
   const { company } = view
   const [draft, setDraft] = useState(blankEvent)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -107,7 +109,7 @@ export function CompanyDetail({ view, profile, onClose, onEdit, onUpdateEvents, 
                 <article className={event.id === highlightedEventId ? 'event-row todo-event-row highlighted-event' : 'event-row todo-event-row'} key={event.id}>
                   <button className="todo-complete-button" type="button" aria-label={`${event.title || event.type}を完了にする`} onClick={() => completeEvent(event.id)}>✓</button>
                   <div className={`event-date ${deadlineTone(eventDateTime(event))}`}><strong>{new Date(eventDateTime(event)).getDate()}</strong><span>{new Date(eventDateTime(event)).toLocaleDateString('ja-JP', { month: 'short' })}</span></div>
-                  <div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(eventDateTime(event)).toLocaleString('ja-JP')} {event.location && `· ${event.location}`}</p>{event.memo && <small>{event.memo}</small>}<span className="action-source-links detail-action-links">{event.myPageUrl && <a href={event.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{event.sourceUrl && <a href={event.sourceUrl} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span></div>
+                  <div className="event-copy"><div><span>{event.type}</span><em>{event.status}</em></div><h4>{event.title}</h4><p>{new Date(eventDateTime(event)).toLocaleString('ja-JP')} {event.location && `· ${event.location}`}</p>{event.memo && <small>{event.memo}</small>}<span className="action-source-links detail-action-links">{event.myPageUrl && <a href={event.myPageUrl} target="_blank" rel="noreferrer">MyPageを開く ↗</a>}{buildGmailSourceUrl({ gmailAccount, sourceRfcMessageId: event.sourceRfcMessageId, legacySourceUrl: event.sourceUrl }) && <a href={buildGmailSourceUrl({ gmailAccount, sourceRfcMessageId: event.sourceRfcMessageId, legacySourceUrl: event.sourceUrl })!} target="_blank" rel="noreferrer">元メールを開く ↗</a>}</span></div>
                   <div className="event-actions"><strong className={deadlineTone(eventDateTime(event))}>{formatDeadlineLabel(eventDateTime(event))}</strong><button type="button" onClick={() => startEdit(event)}>編集</button><button className="danger-link" type="button" onClick={() => deleteEvent(event.id)}>削除</button></div>
                 </article>
               ))}

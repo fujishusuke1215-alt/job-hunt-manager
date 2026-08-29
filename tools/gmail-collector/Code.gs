@@ -26,7 +26,7 @@ function runQueuedCompanyBackfills_() {
   });
 }
 function assertExpectedGmailAccount_() {
-  const expected = String(PropertiesService.getScriptProperties().getProperty('EXPECTED_GMAIL_ACCOUNT') || 'fuji.sh1215@gmail.com').trim().toLowerCase();
+  const expected = requiredExpectedGmailAccount_();
   const actual = String(Gmail.Users.getProfile('me').emailAddress || '').trim().toLowerCase();
   if (actual !== expected) {
     // Do not send the unexpected account address to the backend.  The owner can
@@ -37,6 +37,14 @@ function assertExpectedGmailAccount_() {
   }
   try { api_('gmail_collector_state', { status: 'running', expected_account: expected }); } catch (_) {}
   return actual;
+}
+function requiredExpectedGmailAccount_() {
+  const expected = String(PropertiesService.getScriptProperties().getProperty('EXPECTED_GMAIL_ACCOUNT') || '').trim().toLowerCase();
+  if (expected) return expected;
+  // Fail closed: an unset owner account must never fall back to whichever
+  // Gmail account happens to be active in Apps Script.
+  try { api_('gmail_collector_state', { status: 'failed', error_category: 'gmail_account_unconfigured' }); } catch (_) {}
+  throw new Error('gmail_account_unconfigured: EXPECTED_GMAIL_ACCOUNT Script Property is required');
 }
 function classify_(text) {
   const v = text.replace(/\s+/g, ' ');
@@ -76,7 +84,7 @@ function strongCompanyName_(sender) {
 }
 function toFinding_(message, now) {
   const heads=Object.fromEntries((message.payload.headers||[]).map(h=>[h.name.toLowerCase(),h.value])), subject=heads.subject||'', text=extractText_(message.payload), all=subject+'\n'+text, receivedAt=new Date(Number(message.internalDate)).toISOString(), type=classify_(all), actionType=actionType_(type), parsed=parseDateTime_(all,receivedAt), urls=(text.match(/https?:\/\/[^\s<>"']+/g)||[]).slice(0,10);
-  const due=/deadline|required|reservation|document/i.test(actionType||'')&&parsed?(parsed.at||new Date(`${parsed.date}T23:59:00+09:00`).toISOString()):null, starts=/scheduled|invitation/i.test(actionType||'')&&parsed?.at?parsed.at:null, sender=heads.from||'', rfcMessageId=String(heads['message-id']||'').trim(), account=String(PropertiesService.getScriptProperties().getProperty('EXPECTED_GMAIL_ACCOUNT')||'fuji.sh1215@gmail.com').trim(), fallback=`from:(${sender.match(/<([^>]+)>/)?.[1]||sender}) subject:(${subject.replace(/"/g,'').slice(0,120)})`, query=rfcMessageId?`rfc822msgid:${rfcMessageId}`:fallback, search=`https://mail.google.com/mail/?authuser=${encodeURIComponent(account)}#search/${encodeURIComponent(query)}`, myPageUrl=urls.find(url=>/^https:\/\//i.test(url)&&/mypage|my-page|entry|recruit|career/i.test(url)&&/マイページ|MyPage|ログイン|採用/i.test(all))||null;
+  const due=/deadline|required|reservation|document/i.test(actionType||'')&&parsed?(parsed.at||new Date(`${parsed.date}T23:59:00+09:00`).toISOString()):null, starts=/scheduled|invitation/i.test(actionType||'')&&parsed?.at?parsed.at:null, sender=heads.from||'', rfcMessageId=String(heads['message-id']||'').trim(), account=requiredExpectedGmailAccount_(), fallback=`from:(${sender.match(/<([^>]+)>/)?.[1]||sender}) subject:(${subject.replace(/"/g,'').slice(0,120)})`, query=rfcMessageId?`rfc822msgid:${rfcMessageId.replace(/^<|>$/g,'')}`:fallback, search=`https://mail.google.com/mail/u/${encodeURIComponent(account)}/#search/${encodeURIComponent(query)}`, myPageUrl=urls.find(url=>/^https:\/\//i.test(url)&&/mypage|my-page|entry|recruit|career/i.test(url)&&/マイページ|MyPage|ログイン|採用/i.test(all))||null;
   const companyName=strongCompanyName_(sender);
   return {finding_type:type,source_external_id:message.id,source_thread_id:message.threadId,source_url:search,source_timestamp:receivedAt,observed_at:now.toISOString(),company:companyName,confidence:actionType&&(due||starts||/completed|offer|rejection|mypage/.test(type))?.92:(type==='marketing'||type==='no_action'?.9:.55),evidence_excerpt:(subject+' — '+text).slice(0,800),action_type:actionType,action_due_at:due,action_starts_at:starts,action_ends_at:starts&&parsed?.endAt?parsed.endAt:null,payload:{subject,sender,companyName,rfcMessageId,gmailAccount:account,attachment:hasAttachment_(message.payload),urls,myPageUrl,actionType,actionTitle:subject,dueAt:due,startsAt:starts,endsAt:starts&&parsed?.endAt?parsed.endAt:null},fingerprint:`gmail:${message.id}:${type}`};
 }

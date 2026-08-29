@@ -36,6 +36,7 @@ export interface TodayAction {
   sourceUrl?: string | null
   myPageUrl?: string | null
   sourceSubject?: string | null
+  sourceRfcMessageId?: string | null
   selectionEventId?: string
   watchFindingId?: string
   /** 完了前の状態。Undo はこの値へ戻します。 */
@@ -232,6 +233,7 @@ function selectionEventToAction(
     sourceUrl: event.sourceUrl,
     myPageUrl: event.myPageUrl,
     sourceSubject: event.sourceSubject,
+    sourceRfcMessageId: event.sourceRfcMessageId,
     selectionEventId: event.id,
     status: event.status,
   }

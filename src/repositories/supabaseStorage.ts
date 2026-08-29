@@ -16,7 +16,7 @@ import {
 } from './types'
 
 interface Row { user_id: string; app_data: unknown; revision: number; created_at: string; updated_at: string }
-export interface CollectorStateSummary { collectorType: string; lastAttempt: string | null; lastSuccess: string | null; failureCount: number; lastErrorCategory: string | null }
+export interface CollectorStateSummary { collectorType: string; lastAttempt: string | null; lastSuccess: string | null; failureCount: number; lastErrorCategory: string | null; gmailAccount?: string | null }
 
 export class SupabaseStorageRepository implements StorageRepository {
   constructor(private readonly client: SupabaseClient, private readonly userId: string) {}
@@ -73,9 +73,9 @@ export class SupabaseStorageRepository implements StorageRepository {
     return (data ?? []).map((row: Record<string, unknown>) => ({ id: String(row.id), company: typeof row.company === 'string' ? row.company : null, findingType: String(row.finding_type), payload: (row.payload ?? {}) as Record<string, unknown>, sourceType: row.source_type as CollectorFinding['sourceType'], sourceExternalId: typeof row.source_external_id === 'string' ? row.source_external_id : null, sourceUrl: typeof row.source_url === 'string' ? row.source_url : null, sourceTimestamp: canonicalIsoDateTime(row.source_timestamp), observedAt: String(row.observed_at), confidence: Number(row.confidence), evidenceExcerpt: String(row.evidence_excerpt), fingerprint: String(row.fingerprint), status: row.status as CollectorFinding['status'], reviewReason: typeof row.review_reason === 'string' ? row.review_reason : null, triageAction: typeof row.triage_action === 'string' ? row.triage_action as CollectorFinding['triageAction'] : null, triageReason: typeof row.triage_reason === 'string' ? row.triage_reason : null, triageConfidence: typeof row.triage_confidence === 'number' ? row.triage_confidence : null }))
   }
   async loadCollectorStates(): Promise<CollectorStateSummary[]> {
-    const { data, error } = await this.client.from('collector_state').select('collector_type,last_attempt,last_success,failure_count,last_error_category').eq('user_id', this.userId)
+    const { data, error } = await this.client.from('collector_state').select('collector_type,last_attempt,last_success,failure_count,last_error_category,cursor').eq('user_id', this.userId)
     if (error) throw this.error(error.message)
-    return (data ?? []).map((row: Record<string, unknown>) => ({ collectorType: String(row.collector_type), lastAttempt: typeof row.last_attempt === 'string' ? row.last_attempt : null, lastSuccess: typeof row.last_success === 'string' ? row.last_success : null, failureCount: Number(row.failure_count ?? 0), lastErrorCategory: typeof row.last_error_category === 'string' ? row.last_error_category : null }))
+    return (data ?? []).map((row: Record<string, unknown>) => { const cursor = row.cursor as Record<string, unknown> | null; return { collectorType: String(row.collector_type), lastAttempt: typeof row.last_attempt === 'string' ? row.last_attempt : null, lastSuccess: typeof row.last_success === 'string' ? row.last_success : null, failureCount: Number(row.failure_count ?? 0), lastErrorCategory: typeof row.last_error_category === 'string' ? row.last_error_category : null, gmailAccount: cursor?.account_verified === true && typeof cursor.gmail_account === 'string' ? cursor.gmail_account : null } })
   }
   async setCollectorFindingStatus(id: string, status: 'approved' | 'rejected'): Promise<void> { const { error } = await this.client.from('collector_findings').update({ status, updated_at: new Date().toISOString() }).eq('id', id).eq('user_id', this.userId).in('status', ['new', 'needs_review']); if (error) throw this.error(error.message) }
 
