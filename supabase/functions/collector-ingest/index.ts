@@ -1,6 +1,7 @@
 // Deploy with `supabase functions deploy collector-ingest --no-verify-jwt` and set
 // COLLECTOR_GMAIL_TOKEN / COLLECTOR_WEB_TOKEN / COLLECTOR_OWNER_USER_ID as secrets.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { nextGmailCollectorState } from '../../../src/services/gmailCollectorState.ts'
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return new Response('method not allowed', { status: 405 })
@@ -12,15 +13,17 @@ Deno.serve(async (request) => {
   const body = await request.json()
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   if (type === 'gmail' && body.action === 'gmail_collector_state') {
-    const failed = body.status === 'failed'
-    const cursor = { gmail_account: String(body.expected_account ?? ''), account_verified: !failed }
+    const status = String(body.status ?? '')
+    if (!['running', 'success', 'failed'].includes(status)) return new Response('invalid gmail status', { status: 400 })
+    const { data: prior, error: priorError } = await admin.from('collector_state').select('cursor,last_success,failure_count,last_error_category').eq('user_id', owner).eq('collector_type', 'gmail').eq('target_key', 'owner').maybeSingle()
+    if (priorError) return new Response('gmail state lookup failed', { status: 500 })
+    const attemptedAt = new Date().toISOString()
+    const state = nextGmailCollectorState(status as 'running' | 'success' | 'failed', prior, attemptedAt, typeof body.error_category === 'string' ? body.error_category : undefined)
     const { error } = await admin.from('collector_state').upsert({
       user_id: owner,
       collector_type: 'gmail',
       target_key: 'owner',
-      last_attempt: new Date().toISOString(),
-      ...(failed ? { last_error_category: String(body.error_category ?? 'gmail_collector_failed'), failure_count: 1 } : { last_success: new Date().toISOString(), last_error_category: null, failure_count: 0 }),
-      cursor,
+      ...state,
     }, { onConflict: 'user_id,collector_type,target_key' })
     return error ? new Response('gmail state failed', { status: 500 }) : Response.json({ ok: true })
   }

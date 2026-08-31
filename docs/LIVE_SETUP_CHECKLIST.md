@@ -8,7 +8,7 @@ Phase 3は必ず`feature/automated-job-hunt-phase2`の最新commitから開始�
 4. Project Settings > APIからProject URLとPublishable/anon keyを取得し、GitHub Repository Variablesの`VITE_SUPABASE_URL`、`VITE_SUPABASE_PUBLISHABLE_KEY`へ入れる。service_role keyは絶対にVITEへ入れない。
 5. Pages workflowのbuild envを`VITE_STORAGE_MODE=supabase`へ変更してdeployする。default branchのscheduled workflowも確認する。
 6. Edge Functionへ`collector-ingest`をdeployし、Supabase secretsにowner user UUID、Gmail/Webそれぞれ別tokenを設定する。tokenはGitHub/Apps ScriptのSecret/Propertiesだけへ入れる。
-7. Google Apps ScriptのGmail collectorを手動dry-runし、FindingにGmail本文全文や認証情報がないことを確認してからtriggerを有効化する。
+7. Google Apps ScriptのGmail collectorは、コード同期後に次の順で設定する。Script Propertiesへ`INGEST_URL`、`COLLECTOR_TOKEN`、`EXPECTED_GMAIL_ACCOUNT`（`<collector Gmail address>`）、`BACKFILL_SINCE`、必要なら`BACKFILL_BATCH_SIZE`を設定する。値は公開リポジトリに入れない。Gmail APIの高度なサービスを確認し、`validateCollectorConfiguration()`でアカウント一致と必須設定の存在だけを確認する（値やGmail本文はログ出力しない）。手動のincremental runが成功し、`LAST_SUCCESSFUL_SYNC`とCollector状態を確認してから、`runDailyIncremental`の日次triggerを1件だけ有効化する。
 8. Web Collectorは`COLLECTOR_DRY_RUN=true pnpm run collector:dry-run`でstate/Findingを書き込まないdry-runを行う。live runは`COLLECTOR_DRY_RUN=false node tools/web-collector/run.mjs`。初回成功時はbaseline hashのみ保存、差分時のみFindingを作る。失敗はattempt/errorを記録するが、前回成功hashとlast_successを維持する。
 9. 日常運用では企業・選考画面から候補企業を追加し、同期により`monitoring_targets`を作成する。private MyPage CSVはimport/commitしない。
 

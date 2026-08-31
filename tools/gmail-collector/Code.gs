@@ -1,7 +1,22 @@
 /* Owner-only Gmail collector. Configure INGEST_URL, COLLECTOR_TOKEN, BACKFILL_SINCE, and EXPECTED_GMAIL_ACCOUNT. */
 const JST = 'Asia/Tokyo';
-function runInitialBackfill() { return runCollector_(true); }
-function runDailyIncremental() { runCollector_(false); runQueuedCompanyBackfills_(); }
+function runInitialBackfill() { return runCollectorWithState_(true, false); }
+function runDailyIncremental() { return runCollectorWithState_(false, true); }
+function runCollectorWithState_(backfill, includeQueuedBackfills) {
+  try {
+    const complete = runCollector_(backfill);
+    // A paginated pass is deliberately left as running.  The checkpoint has not
+    // advanced until every page has been ingested successfully.
+    if (!complete) return;
+    if (includeQueuedBackfills) runQueuedCompanyBackfills_();
+    reportCollectorState_('success');
+  } catch (error) {
+    // Account/configuration failures already report one precise terminal state.
+    // Do not double-count them as a generic collector failure.
+    if (!isAccountConfigurationError_(error)) reportCollectorState_('failed', 'gmail_collector_runtime_error');
+    throw error;
+  }
+}
 function runCollector_(backfill) {
   const p = PropertiesService.getScriptProperties(), now = new Date();
   assertExpectedGmailAccount_();
@@ -10,8 +25,9 @@ function runCollector_(backfill) {
   const query = `after:${Utilities.formatDate(since, JST, 'yyyy/MM/dd')} (採用 OR 選考 OR 面接 OR ES OR "Webテスト" OR 適性検査 OR エントリー OR インターン OR 説明会 OR 結果 OR 締切 OR マイページ)`;
   const list = Gmail.Users.Messages.list('me', { q: query, maxResults: Number(p.getProperty('BACKFILL_BATCH_SIZE') || '50'), pageToken: p.getProperty('RESUME_PAGE_TOKEN') || undefined });
   ingest_((list.messages || []).map(ref => toFinding_(Gmail.Users.Messages.get('me', ref.id, { format: 'full' }), now)));
-  if (list.nextPageToken) { p.setProperty('RESUME_PAGE_TOKEN', list.nextPageToken); return; }
+  if (list.nextPageToken) { p.setProperty('RESUME_PAGE_TOKEN', list.nextPageToken); return false; }
   p.deleteProperty('RESUME_PAGE_TOKEN'); p.setProperty('LAST_SUCCESSFUL_SYNC', now.toISOString());
+  return true;
 }
 function runQueuedCompanyBackfills_() {
   assertExpectedGmailAccount_();
@@ -32,19 +48,49 @@ function assertExpectedGmailAccount_() {
     // Do not send the unexpected account address to the backend.  The owner can
     // see a clear state message without turning a wrong-account run into Gmail
     // ingress for this application.
-    try { api_('gmail_collector_state', { status: 'failed', error_category: 'gmail_account_mismatch', expected_account: expected }); } catch (_) {}
+    reportCollectorState_('failed', 'gmail_account_mismatch');
     throw new Error('gmail_account_mismatch: collector is not running as the configured owner account');
   }
-  try { api_('gmail_collector_state', { status: 'running', expected_account: expected }); } catch (_) {}
+  reportCollectorState_('running');
   return actual;
+}
+function reportCollectorState_(status, errorCategory) {
+  try {
+    const body = { status };
+    if (errorCategory) body.error_category = errorCategory;
+    // The private expected account is never needed by the backend to determine
+    // health and is intentionally not included in status telemetry.
+    api_('gmail_collector_state', body);
+  } catch (_) {}
+}
+function isAccountConfigurationError_(error) {
+  return /gmail_account_(?:unconfigured|mismatch)/.test(String(error && error.message || error));
 }
 function requiredExpectedGmailAccount_() {
   const expected = String(PropertiesService.getScriptProperties().getProperty('EXPECTED_GMAIL_ACCOUNT') || '').trim().toLowerCase();
   if (expected) return expected;
   // Fail closed: an unset owner account must never fall back to whichever
   // Gmail account happens to be active in Apps Script.
-  try { api_('gmail_collector_state', { status: 'failed', error_category: 'gmail_account_unconfigured' }); } catch (_) {}
+  reportCollectorState_('failed', 'gmail_account_unconfigured');
   throw new Error('gmail_account_unconfigured: EXPECTED_GMAIL_ACCOUNT Script Property is required');
+}
+function validateCollectorConfiguration() {
+  const p = PropertiesService.getScriptProperties();
+  const expectedConfigured = Boolean(String(p.getProperty('EXPECTED_GMAIL_ACCOUNT') || '').trim());
+  const result = {
+    expectedGmailAccountConfigured: expectedConfigured,
+    gmailAccountMatches: false,
+    ingestUrlConfigured: Boolean(String(p.getProperty('INGEST_URL') || '').trim()),
+    collectorTokenConfigured: Boolean(String(p.getProperty('COLLECTOR_TOKEN') || '').trim()),
+    backfillSinceConfigured: Boolean(String(p.getProperty('BACKFILL_SINCE') || '').trim()),
+  };
+  if (expectedConfigured) {
+    const expected = String(p.getProperty('EXPECTED_GMAIL_ACCOUNT')).trim().toLowerCase();
+    const actual = String(Gmail.Users.getProfile('me').emailAddress || '').trim().toLowerCase();
+    result.gmailAccountMatches = actual === expected;
+  }
+  Logger.log(JSON.stringify(result));
+  return result;
 }
 function classify_(text) {
   const v = text.replace(/\s+/g, ' ');

@@ -8,14 +8,25 @@ type GmailPart = {
   parts?: GmailPart[]
 }
 
-function loadCollectorContext() {
+function loadCollectorContext(options: { properties?: Record<string, string | null>; gmailAccount?: string } = {}) {
   const source = readFileSync(resolve(process.cwd(), 'tools/gmail-collector/Code.gs'), 'utf8')
+  const properties = options.properties ?? { EXPECTED_GMAIL_ACCOUNT: 'collector@example.test' }
   const context: Record<string, unknown> = {
     PropertiesService: {
       getScriptProperties: () => ({
-        getProperty: (key: string) => key === 'EXPECTED_GMAIL_ACCOUNT' ? 'collector@example.test' : null,
+        getProperty: (key: string) => properties[key] ?? null,
       }),
     },
+    Gmail: {
+      Users: {
+        getProfile: () => ({ emailAddress: options.gmailAccount ?? 'collector@example.test' }),
+        Messages: {
+          list: () => { throw new Error('Gmail search must not run') },
+          get: () => { throw new Error('Gmail fetch must not run') },
+        },
+      },
+    },
+    Logger: { log: () => undefined },
     Utilities: {
       base64DecodeWebSafe(value: string) {
         if (value.includes('%')) throw new Error('invalid base64')
@@ -82,5 +93,41 @@ describe('Gmail collector Apps Script', () => {
     expect(finding.source_url).toContain('AccountChooser?Email=collector%40example.test')
     expect(finding.source_url).toContain('rfc822msgid')
     expect((finding.payload as Record<string, unknown>).rfcMessageId).toBe('<message-1@example.com>')
+  })
+
+  it('fails closed without the expected-account property before Gmail ingestion', () => {
+    const context = loadCollectorContext({ properties: {} })
+    const runCollector = context.runCollector_ as (backfill: boolean) => unknown
+    expect(() => runCollector(false)).toThrow('gmail_account_unconfigured')
+  })
+
+  it('fails closed for a different execution account before Gmail ingestion', () => {
+    const context = loadCollectorContext({ gmailAccount: 'different@example.test' })
+    const runCollector = context.runCollector_ as (backfill: boolean) => unknown
+    expect(() => runCollector(false)).toThrow('gmail_account_mismatch')
+  })
+
+  it('offers a configuration self-check without collecting Gmail', () => {
+    const context = loadCollectorContext({
+      properties: {
+        EXPECTED_GMAIL_ACCOUNT: 'collector@example.test',
+        INGEST_URL: 'https://collector.example.test',
+        COLLECTOR_TOKEN: 'test-only-token',
+        BACKFILL_SINCE: '2026-07-24T00:00:00+09:00',
+      },
+    })
+    const validate = context.validateCollectorConfiguration as () => Record<string, boolean>
+    expect(validate()).toMatchObject({
+      expectedGmailAccountConfigured: true,
+      gmailAccountMatches: true,
+      ingestUrlConfigured: true,
+      collectorTokenConfigured: true,
+      backfillSinceConfigured: true,
+    })
+  })
+
+  it('keeps a real personal address out of the public collector source', () => {
+    const source = readFileSync(resolve(process.cwd(), 'tools/gmail-collector/Code.gs'), 'utf8')
+    expect(source).not.toContain(['fuji', 'sh1215'].join('.') + '@gmail.com')
   })
 })
