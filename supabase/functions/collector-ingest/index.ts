@@ -3,6 +3,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { nextGmailCollectorState } from '../../../src/services/gmailCollectorState.ts'
 
+function nextGmailCollectorState(status: 'running' | 'success' | 'failed', prior: { cursor?: unknown; failure_count?: number | null } | null, attemptedAt: string, errorCategory?: string) {
+  const priorCursor = prior?.cursor && typeof prior.cursor === 'object' ? prior.cursor as Record<string, unknown> : {}
+  const cursor = { ...priorCursor, account_verified: status !== 'failed' }
+  if (status === 'running') return { last_attempt: attemptedAt, cursor }
+  if (status === 'success') return { last_attempt: attemptedAt, last_success: attemptedAt, last_error_category: null, failure_count: 0, cursor }
+  return { last_attempt: attemptedAt, last_error_category: errorCategory || 'gmail_collector_failed', failure_count: Number(prior?.failure_count ?? 0) + 1, cursor }
+}
+
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return new Response('method not allowed', { status: 405 })
   const type = request.headers.get('x-collector-type')
