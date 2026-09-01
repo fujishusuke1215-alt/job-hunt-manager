@@ -29,7 +29,7 @@ export interface TriageDecision {
 }
 
 const corporateSuffix = /(?:株式会社|有限会社|合同会社|（株）|\(株\)|㈱)/g
-const decorations = /[\s・･,，.．:：;；【】（）()「」『』]/g
+const decorations = /[\s\u3000・･,，.．:：;；【】[\]（）()「」『』"'“”‘’]/g
 
 export function normalizeCompanyName(value: string): string {
   return value.normalize('NFKC').toLocaleLowerCase('en-US').replace(corporateSuffix, '').replace(decorations, '')

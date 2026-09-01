@@ -126,6 +126,13 @@ describe('Gmail collector Apps Script', () => {
     })
   })
 
+  it('removes only outer display-name wrappers before emitting a strong company name', () => {
+    const context = loadCollectorContext()
+    const strongCompanyName = context.strongCompanyName_ as (sender: string) => string | null
+    expect(strongCompanyName('"株式会社NTTドコモ" <recruit@example.test>')).toBe('株式会社NTTドコモ')
+    expect(strongCompanyName('“住友電気工業株式会社” <recruit@example.test>')).toBe('住友電気工業株式会社')
+  })
+
   it('keeps a real personal address out of the public collector source', () => {
     const source = readFileSync(resolve(process.cwd(), 'tools/gmail-collector/Code.gs'), 'utf8')
     expect(source).not.toContain(['fuji', 'sh1215'].join('.') + '@gmail.com')

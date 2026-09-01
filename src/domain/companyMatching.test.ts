@@ -26,6 +26,17 @@ describe('company master matching', () => {
     expect(normalizeCompanyName(' 株式会社 ＳＡＭＰＬＥ　ＴＥＣＨ ')).toBe('sample tech')
   })
 
+  it('法人格と安全な引用符の表記揺れを同一視する', () => {
+    const variants = ['NTTドコモ', '株式会社NTTドコモ', '"株式会社NTTドコモ"', '“株式会社ＮＴＴドコモ”', '「NTTドコモ株式会社」']
+    expect(new Set(variants.map(normalizeCompanyName))).toEqual(new Set(['nttドコモ']))
+  })
+
+  it('グループ会社は部分一致では同一視しない', () => {
+    expect(normalizeCompanyName('NTTデータ')).not.toBe(normalizeCompanyName('NTTデータ関西'))
+    expect(normalizeCompanyName('ソニー')).not.toBe(normalizeCompanyName('ソニーグループ'))
+    expect(normalizeCompanyName('パナソニック')).not.toBe(normalizeCompanyName('パナソニック コネクト'))
+  })
+
   it('masterCompanyIdが存在すればcanonical masterへ確定する', () => {
     const result = findMasterCandidates({ masterCompanyId: 'cmp_demo_old_product_01' }, demoCatalog)
     expect(result.status).toBe('confirmed')
@@ -53,4 +64,3 @@ describe('company master matching', () => {
     expect(linked.interest).toBe(company.interest)
   })
 })
-

@@ -125,7 +125,7 @@ function strongCompanyName_(sender) {
   // A display name is accepted only when it includes a Japanese legal-company
   // marker.  Generic recruiting senders and group-wide notification addresses
   // deliberately remain unresolved for a single confirmation candidate.
-  const display=String(sender||'').replace(/<[^>]+>/g,'').replace(/[【\[（(].*?[】\]）)]/g,' ').replace(/(採用|人事|新卒|キャリア|リクルーティング|Recruiting|採用担当|運営).*/ig,'').trim();
+  const display=String(sender||'').replace(/<[^>]+>/g,'').replace(/[【\[（(].*?[】\]）)]/g,' ').replace(/(採用|人事|新卒|キャリア|リクルーティング|Recruiting|採用担当|運営).*/ig,'').trim().replace(/^["'“”‘’「」『』【】\[\]（）()]+|["'“”‘’「」『』【】\[\]（）()]+$/g,'').trim();
   return /(?:株式会社|有限会社|合同会社|一般社団法人|一般財団法人)/.test(display) && display.length <= 80 ? display : null;
 }
 function toFinding_(message, now) {

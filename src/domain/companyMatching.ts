@@ -16,12 +16,18 @@ const corporateDesignators = [
   'co ltd',
 ]
 
+// Identity matching deliberately removes only presentation wrappers and legal
+// designators. It never uses substring or fuzzy matching, so group companies
+// such as NTTデータ / NTTデータ関西 remain distinct.
+const identityWrappers = /["'“”‘’「」『』]/g
+const identitySeparators = /[\s\u3000・･,，.．:：;；]+/g
+
 export function normalizeCompanyName(value: string): string {
   let normalized = value.normalize('NFKC').trim().toLocaleLowerCase('ja')
   for (const designator of corporateDesignators) {
     normalized = normalized.replaceAll(designator.normalize('NFKC').toLocaleLowerCase('ja'), ' ')
   }
-  return normalized.replace(/\s+/g, ' ').trim()
+  return normalized.replace(identityWrappers, '').replace(identitySeparators, ' ').trim()
 }
 
 export function normalizeDomain(value: string): string {
@@ -109,4 +115,3 @@ export function linkUserCompanyToMaster(
   }
   return { ...company, masterCompanyId, updatedAt: now }
 }
-
